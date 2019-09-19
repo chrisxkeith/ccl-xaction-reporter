@@ -16,14 +16,16 @@ class Reporter:
         date_str, time_str = datetime_str.split(' ')
         mon, day, year = date_str.split('/')
         hour, minute = time_str.split(':')
-        return datetime.datetime(int('20' + year), int(mon), int(day), int(hour), int(minute), 0)
+        dt = datetime.datetime(int('20' + year), int(mon), int(day), int(hour), int(minute), 0)
+        return dt.strftime('%Y/%m/%d %H:%M')
 
     def handle_stripe(self, dict, record):
         junk, email = record['Customer Description'].split('|')
+        record['Created (UTC)'] = self.stripe_date(record['Created (UTC)'])
         # - compare timestamps, keep latest payment record.
         if dict.get(email.strip()):
-            current_date = self.stripe_date(dict[email.strip()]['Created (UTC)'])
-            new_date = self.stripe_date(record['Created (UTC)'])
+            current_date = dict[email.strip()]['Created (UTC)']
+            new_date = record['Created (UTC)']
             if new_date > current_date:
                 dict[email.strip()] = record
         else:
@@ -60,7 +62,7 @@ class Reporter:
     def merge_payment_dates(self, stripe_dict_records, gsheets_dict_records):
         for r in gsheets_dict_records.keys():
             if stripe_dict_records.get(r):
-                gsheets_dict_records.get(r)['Last Payment Date'] = stripe_dict_records.get('Created (UTC)')
+                gsheets_dict_records.get(r)['Last Payment Date'] = stripe_dict_records.get(r).get('Created (UTC)')
 
     def get_record_key(self, array_record):
         lpd = ''
