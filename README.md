@@ -1,7 +1,7 @@
 # ccl-xaction-reporter
-_... in progress ..._
-
 Python script to report delinquent member payments.
+
+_... in progress ..._
 
 Steps to set up (one time):
 1. Install python.
