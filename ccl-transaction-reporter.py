@@ -15,9 +15,8 @@ class Reporter:
     def stripe_date(self, datetime_str):
         date_str, time_str = datetime_str.split(' ')
         mon, day, year = date_str.split('/')
-        hour, minute = time_str.split(':')
-        dt = datetime.datetime(int('20' + year), int(mon), int(day), int(hour), int(minute), 0)
-        return dt.strftime('%Y/%m/%d %H:%M')
+        dt = datetime.datetime(int('20' + year), int(mon), int(day), 0, 0, 0)
+        return dt.strftime('%Y/%m/%d')
 
     def handle_stripe(self, dict, record):
         junk, email = record['Customer Description'].split('|')
@@ -33,6 +32,7 @@ class Reporter:
 
     def handle_members(self, dict, record):
         record['Email'] = record['Email'].strip()
+        record['Days Delinquent'] = ''
         dict[record['Email']] = record
 
     def read_from_stream_into_dict(self, file_name, dict_processing_funct):
@@ -61,9 +61,15 @@ class Reporter:
         return dict_record
 
     def merge_payment_dates(self, stripe_dict_records, gsheets_dict_records):
+        should_be_paid_by_date = datetime.datetime.now().replace(day=10)
         for r in gsheets_dict_records.keys():
             if stripe_dict_records.get(r):
-                gsheets_dict_records.get(r)['Last Payment Date'] = stripe_dict_records.get(r).get('Created (UTC)')
+                date_str = stripe_dict_records.get(r).get('Created (UTC)')
+                gsheets_dict_records.get(r)['Last Payment Date'] = date_str
+                last_paid_date = datetime.datetime.strptime(date_str, '%Y/%m/%d')
+                if last_paid_date < should_be_paid_by_date:
+                    tdiff = should_be_paid_by_date - last_paid_date    
+                    gsheets_dict_records.get(r)['Days Delinquent'] = str(tdiff.days)
 
     def get_record_key(self, array_record):
         lpd = ''
@@ -77,6 +83,7 @@ class Reporter:
             array_records.append(self.to_array(r))
         sorted_by_value = sorted(array_records, key=self.get_record_key)
         gsheets_fieldnames.append('Last Payment Date')
+        gsheets_fieldnames.append('Days Delinquent')
         out_file_name = 'payment_statuses.csv'
         with open(out_file_name, 'w', newline='') as outfile:
             writer = csv.DictWriter(outfile, gsheets_fieldnames, delimiter=',', quotechar='"',
@@ -85,8 +92,10 @@ class Reporter:
             c = 0
             for record in sorted_by_value:
                 if record[self.field_indices['Status']] == "Active":
-                    writer.writerow(self.to_dict(record))
-                    c += 1
+                    the_dict = self.to_dict(record)
+                    if the_dict.get("Last Payment Date"):
+                        writer.writerow(the_dict)
+                        c += 1
         log(str("{: >4d}".format(c)) + ' records written to ' + out_file_name)
 
     def write_full_email_list(self, stripe_dict_records, gsheets_dict_records):
@@ -98,6 +107,7 @@ class Reporter:
         for k in gsheets_dict_records.keys():
             if master_list.get(k):
                 master_list.get(k)['In Google Sheet'] = 'Y'
+                master_list.get(k)['Notes'] = gsheets_dict_records[k]['Notes']
             else:
                 master_list[k] = {'Email' : k, 'In Stripe' : '', 'In Google Sheet' : 'Y',
                     'Stripe payment date' : '', 'Notes' : gsheets_dict_records[k]['Notes'] }
@@ -125,6 +135,8 @@ class Reporter:
             i += 1
         self.field_indices['Last Payment Date'] = i        
         self.field_names_dict[i] = 'Last Payment Date'        
+        self.field_indices['Days Delinquent'] = i + 1        
+        self.field_names_dict[i + 1] = 'Days Delinquent'
         self.merge_payment_dates(stripe_dict_records, gsheets_dict_records)
         self.write_payment_statuses(gsheets_fieldnames, gsheets_dict_records)
         self.write_full_email_list(stripe_dict_records, gsheets_dict_records)
