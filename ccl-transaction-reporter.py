@@ -93,9 +93,12 @@ class Reporter:
             writer = csv.DictWriter(outfile, gsheets_fieldnames, delimiter=',', quotechar='"',
                                     quoting=csv.QUOTE_MINIMAL)
             writer.writeheader()
+            c = 0
             for record in sorted_by_value:
-                writer.writerow(self.to_dict(record))
-        log(str("{: >4d}".format(len(sorted_by_value))) + ' records written to ' + out_file_name)
+                if record[self.field_indices['Status']] == "Active":
+                    writer.writerow(self.to_dict(record))
+                    c += 1
+        log(str("{: >4d}".format(c)) + ' records written to ' + out_file_name)
 
 if '__main__' == __name__:
     Reporter().main()
