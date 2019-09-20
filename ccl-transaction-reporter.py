@@ -92,14 +92,18 @@ class Reporter:
     def write_full_email_list(self, stripe_dict_records, gsheets_dict_records):
         master_list = {}
         for k in stripe_dict_records.keys():
-            master_list[k] = {'Email' : k, 'In Stripe' : 'Y', 'In Google Sheet' : ''}
+            master_list[k] = {'Email' : k, 'In Stripe' : 'Y', 'In Google Sheet' : '',
+                'Stripe payment date' : stripe_dict_records[k]['Created (UTC)'],
+                'Notes' : ''}
         for k in gsheets_dict_records.keys():
             if master_list.get(k):
                 master_list.get(k)['In Google Sheet'] = 'Y'
             else:
-                master_list[k] = {'Email' : k, 'In Stripe' : '', 'In Google Sheet' : 'Y'}
-        field_names = ['Email', 'In Stripe', 'In Google Sheet']
-        field_indices = {'Email' : 1, "In Stripe": 2, 'In Google Sheet' : 3}
+                master_list[k] = {'Email' : k, 'In Stripe' : '', 'In Google Sheet' : 'Y',
+                    'Stripe payment date' : '', 'Notes' : gsheets_dict_records[k]['Notes'] }
+        field_names = ['Email', 'In Stripe', 'In Google Sheet', 'Stripe payment date', 'Notes']
+        field_indices = {'Email' : 1, "In Stripe": 2, 'In Google Sheet' : 3,
+            'Stripe payment date' : 4, 'Notes' : 5}
         out_file_name = 'full_email_list.csv'
         with open(out_file_name, 'w', newline='') as outfile:
             writer = csv.DictWriter(outfile, field_names, delimiter=',', quotechar='"',
