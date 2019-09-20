@@ -32,6 +32,7 @@ class Reporter:
             dict[email.strip()] = record
 
     def handle_members(self, dict, record):
+        record['Email'] = record['Email'].strip()
         dict[record['Email']] = record
 
     def read_from_stream_into_dict(self, file_name, dict_processing_funct):
@@ -70,19 +71,7 @@ class Reporter:
             lpd = array_record[self.field_indices['Last Payment Date']]
         return array_record[self.field_indices['Status']] + ' ' + lpd
 
-    def main(self):
-        stripe_fieldnames, stripe_dict_records = self.read_from_stream_into_dict(
-            'STRIPE_unified_payments.csv', self.handle_stripe)
-        gsheets_fieldnames, gsheets_dict_records = self.read_from_stream_into_dict(
-            'Member list for export for python report - Sheet1.csv', self.handle_members)
-        i = 0
-        for field_name in gsheets_fieldnames:
-            self.field_indices[field_name] = i
-            self.field_names_dict[i] = field_name
-            i += 1
-        self.field_indices['Last Payment Date'] = i        
-        self.field_names_dict[i] = 'Last Payment Date'        
-        self.merge_payment_dates(stripe_dict_records, gsheets_dict_records)
+    def write_payment_statuses(self, gsheets_fieldnames, gsheets_dict_records):
         array_records = []
         for r in gsheets_dict_records.values():
             array_records.append(self.to_array(r))
@@ -99,6 +88,42 @@ class Reporter:
                     writer.writerow(self.to_dict(record))
                     c += 1
         log(str("{: >4d}".format(c)) + ' records written to ' + out_file_name)
+
+    def write_full_email_list(self, stripe_dict_records, gsheets_dict_records):
+        master_list = {}
+        for k in stripe_dict_records.keys():
+            master_list[k] = {'Email' : k, 'In Stripe' : 'Y', 'In Google Sheet' : ''}
+        for k in gsheets_dict_records.keys():
+            if master_list.get(k):
+                master_list.get(k)['In Google Sheet'] = 'Y'
+            else:
+                master_list[k] = {'Email' : k, 'In Stripe' : '', 'In Google Sheet' : 'Y'}
+        field_names = ['Email', 'In Stripe', 'In Google Sheet']
+        field_indices = {'Email' : 1, "In Stripe": 2, 'In Google Sheet' : 3}
+        out_file_name = 'full_email_list.csv'
+        with open(out_file_name, 'w', newline='') as outfile:
+            writer = csv.DictWriter(outfile, field_names, delimiter=',', quotechar='"',
+                                    quoting=csv.QUOTE_MINIMAL)
+            writer.writeheader()
+            for record in master_list.items():
+                writer.writerow(record[1])
+        log(str("{: >4d}".format(len(master_list))) + ' records written to ' + out_file_name)
+
+    def main(self):
+        stripe_fieldnames, stripe_dict_records = self.read_from_stream_into_dict(
+            'STRIPE_unified_payments.csv', self.handle_stripe)
+        gsheets_fieldnames, gsheets_dict_records = self.read_from_stream_into_dict(
+            'Member list for export for python report - Sheet1.csv', self.handle_members)
+        i = 0
+        for field_name in gsheets_fieldnames:
+            self.field_indices[field_name] = i
+            self.field_names_dict[i] = field_name
+            i += 1
+        self.field_indices['Last Payment Date'] = i        
+        self.field_names_dict[i] = 'Last Payment Date'        
+        self.merge_payment_dates(stripe_dict_records, gsheets_dict_records)
+        self.write_payment_statuses(gsheets_fieldnames, gsheets_dict_records)
+        self.write_full_email_list(stripe_dict_records, gsheets_dict_records)
 
 if '__main__' == __name__:
     Reporter().main()
