@@ -63,13 +63,17 @@ class Reporter:
     def merge_payment_dates(self, stripe_dict_records, gsheets_dict_records):
         should_be_paid_by_date = datetime.datetime.now().replace(day=10)
         for r in gsheets_dict_records.keys():
+            gsheets_rec = gsheets_dict_records.get(r)
             if stripe_dict_records.get(r):
+                gsheets_rec['Payment Method'] = 'Stripe'
                 date_str = stripe_dict_records.get(r).get('Created (UTC)')
-                gsheets_dict_records.get(r)['Last Payment Date'] = date_str
+                gsheets_rec['Last Payment Date'] = date_str
                 last_paid_date = datetime.datetime.strptime(date_str, '%Y/%m/%d')
                 if last_paid_date < should_be_paid_by_date:
-                    tdiff = should_be_paid_by_date - last_paid_date    
-                    gsheets_dict_records.get(r)['Days Delinquent'] = str(tdiff.days)
+                    tdiff = should_be_paid_by_date - last_paid_date
+                    gsheets_rec['Days Delinquent'] = str(tdiff.days)
+            else:
+                gsheets_rec['Payment Method'] = 'unknown'
 
     def get_record_key(self, array_record):
         lpd = ''
@@ -84,6 +88,7 @@ class Reporter:
         sorted_by_value = sorted(array_records, key=self.get_record_key)
         gsheets_fieldnames.append('Last Payment Date')
         gsheets_fieldnames.append('Days Delinquent')
+        gsheets_fieldnames.append('Payment Method')
         out_file_name = 'payment_statuses.csv'
         with open(out_file_name, 'w', newline='') as outfile:
             writer = csv.DictWriter(outfile, gsheets_fieldnames, delimiter=',', quotechar='"',
@@ -123,6 +128,14 @@ class Reporter:
                 writer.writerow(record[1])
         log(str("{: >4d}".format(len(master_list))) + ' records written to ' + out_file_name)
 
+    def read_raw_member_data(self):
+        pass
+        # Read line by line.
+        # Split line by ','
+        # Throw away lines with fewer than 6 fields.
+        # Build record.
+        # Extract payment amount.
+
     def main(self):
         stripe_fieldnames, stripe_dict_records = self.read_from_stream_into_dict(
             'STRIPE_unified_payments.csv', self.handle_stripe)
@@ -134,9 +147,13 @@ class Reporter:
             self.field_names_dict[i] = field_name
             i += 1
         self.field_indices['Last Payment Date'] = i        
-        self.field_names_dict[i] = 'Last Payment Date'        
-        self.field_indices['Days Delinquent'] = i + 1        
-        self.field_names_dict[i + 1] = 'Days Delinquent'
+        self.field_names_dict[i] = 'Last Payment Date'
+        i += 1
+        self.field_indices['Days Delinquent'] = i        
+        self.field_names_dict[i] = 'Days Delinquent'
+        i += 1
+        self.field_indices['Payment Method'] = i       
+        self.field_names_dict[i] = 'Payment Method'
         self.merge_payment_dates(stripe_dict_records, gsheets_dict_records)
         self.write_payment_statuses(gsheets_fieldnames, gsheets_dict_records)
         self.write_full_email_list(stripe_dict_records, gsheets_dict_records)
