@@ -51,7 +51,8 @@ class Reporter:
 
     def handle_members(self, dict, record):
         record['Email'] = record['Email'].strip()
-        record['Days Delinquent'] = ''
+        record['Days Delinquent'] = ' '
+        record['Last Payment Date'] = ' '
         dict[record['Email']] = record
 
     def read_from_stream_into_dict(self, file_name, dict_processing_funct):
@@ -123,9 +124,8 @@ class Reporter:
             c = 0
             for record in sorted_by_value:
                 the_dict = self.to_dict(record)
-                if the_dict.get("Last Payment Date"):
-                    writer.writerow(the_dict)
-                    c += 1
+                writer.writerow(the_dict)
+                c += 1
         log(str("{: >4d}".format(c)) + ' records written to ' + out_file_name)
 
     def write_full_email_list(self, stripe_dict_records):
