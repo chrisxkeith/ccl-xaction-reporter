@@ -12,23 +12,35 @@ class Reporter:
     field_indices = {}
     field_names_dict = {}
 
-    def stripe_date(self, datetime_str):
-        date_str, time_str = datetime_str.split(' ')
+    def to_std_date_fmt(self, date_str):
         mon, day, year = date_str.split('/')
         dt = datetime.datetime(int('20' + year), int(mon), int(day), 0, 0, 0)
         return dt.strftime('%Y/%m/%d')
 
-    def handle_stripe(self, dict, record):
-        junk, email = record['Customer Description'].split('|')
-        record['Created (UTC)'] = self.stripe_date(record['Created (UTC)'])
+    def stripe_date(self, datetime_str):
+        date_str, time_str = datetime_str.split(' ')
+        return self.to_std_date_fmt(date_str)
+
+    def find_latest_record(self, dict, record, email, date_col_name):
         # - compare timestamps, keep latest payment record.
         if dict.get(email.strip()):
-            current_date = dict[email.strip()]['Created (UTC)']
-            new_date = record['Created (UTC)']
+            current_date = dict[email.strip()][date_col_name]
+            new_date = record[date_col_name]
             if new_date > current_date:
                 dict[email.strip()] = record
         else:
             dict[email.strip()] = record
+
+    def handle_stripe(self, dict, record):
+        junk, email = record['Customer Description'].split('|')
+        record['Created (UTC)'] = self.stripe_date(record['Created (UTC)'])
+        self.find_latest_record(dict, record, email, 'Created (UTC)')
+
+    def handle_paypal(self, dict, record):
+        # Test Type and Note columns to detect if this is a membership dues payment.
+        if 'ubscription' in record['Type'] or 'ember' in record['Note'] or 'ues' in record['Note']:
+            record['Date'] = self.to_std_date_fmt(record['Date'])
+            self.find_latest_record(dict, record, record['From Email Address'], 'Date')
 
     def handle_members(self, dict, record):
         record['Email'] = record['Email'].strip()
@@ -60,10 +72,11 @@ class Reporter:
             i += 1
         return dict_record
 
-    def merge_payment_dates(self, stripe_dict_records, gsheets_dict_records):
+    def merge_payment_dates(self, stripe_dict_records, paypal_dict_records, gsheets_dict_records):
         should_be_paid_by_date = datetime.datetime.now().replace(day=10)
         for r in gsheets_dict_records.keys():
             gsheets_rec = gsheets_dict_records.get(r)
+            gsheets_rec['Payment Method'] = 'cash'
             if stripe_dict_records.get(r):
                 gsheets_rec['Payment Method'] = 'Stripe'
                 date_str = stripe_dict_records.get(r).get('Created (UTC)')
@@ -72,8 +85,8 @@ class Reporter:
                 if last_paid_date < should_be_paid_by_date:
                     tdiff = should_be_paid_by_date - last_paid_date
                     gsheets_rec['Days Delinquent'] = str(tdiff.days)
-            else:
-                gsheets_rec['Payment Method'] = 'unknown'
+            if paypal_dict_records.get(r):
+                gsheets_rec['Payment Method'] = 'PayPal'
 
     def get_record_key(self, array_record):
         lpd = ''
@@ -138,9 +151,14 @@ class Reporter:
 
     def main(self):
         stripe_fieldnames, stripe_dict_records = self.read_from_stream_into_dict(
-            'STRIPE_unified_payments.csv', self.handle_stripe)
+            'STRIPE_unified_payments.csv',
+            self.handle_stripe)
+        paypal_fieldnames, paypal_dict_records = self.read_from_stream_into_dict(
+            'PayPalData2019.csv',
+            self.handle_paypal)
         gsheets_fieldnames, gsheets_dict_records = self.read_from_stream_into_dict(
-            'Member list for export for python report - Sheet1.csv', self.handle_members)
+            'Member list for export for python report - Sheet1.csv',
+            self.handle_members)
         i = 0
         for field_name in gsheets_fieldnames:
             self.field_indices[field_name] = i
@@ -154,7 +172,7 @@ class Reporter:
         i += 1
         self.field_indices['Payment Method'] = i       
         self.field_names_dict[i] = 'Payment Method'
-        self.merge_payment_dates(stripe_dict_records, gsheets_dict_records)
+        self.merge_payment_dates(stripe_dict_records, paypal_dict_records, gsheets_dict_records)
         self.write_payment_statuses(gsheets_fieldnames, gsheets_dict_records)
         self.write_full_email_list(stripe_dict_records, gsheets_dict_records)
 
