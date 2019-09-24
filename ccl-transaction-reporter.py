@@ -92,10 +92,10 @@ class Reporter:
         should_be_paid_by_date = datetime.datetime.now().replace(day=10)
         for r in self.gsheets_dict_records.keys():
             gsheets_rec = self.gsheets_dict_records.get(r)
+            gsheets_rec['Payment Method'] = 'n/a'
             if gsheets_rec.get('Payment Amount') and int(gsheets_rec['Payment Amount']) > 0:
                 gsheets_rec['Payment Method'] = 'unknown'
-                # Eddy Schenderlein ?
-                if gsheets_rec['Email'] in ['litchfield.ken@gmail.com', 'thalula@peralta.edu', 'natarajn@aol.com']:
+                if gsheets_rec['Email'] in ['litchfield.ken@gmail.com', 'thalula@peralta.edu', 'natarajn@aol.com', 'nenufarmoleculesforlife@gmail.com']:
                     gsheets_rec['Payment Method'] = 'cash'
                 else:
                     if stripe_dict_records.get(r):
