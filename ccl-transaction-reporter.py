@@ -14,6 +14,7 @@ class Reporter:
     gsheets_fieldnames = []
     gsheets_dict_records = {}
     paypal_to_membership_email_mapping = {'rolfvw@pizzicato.com' : 'rolfvw@gmail.com', 'alan@halo.nu' : 'alanrockefeller@gmail.com'}
+    # cancelled membership: 'matthew.stewart.mi@gmail.com' : 'codehesionoakland@gmail.com'
 
     def to_std_date_fmt(self, date_str):
         mon, day, year = date_str.split('/')
@@ -92,15 +93,20 @@ class Reporter:
         for r in self.gsheets_dict_records.keys():
             gsheets_rec = self.gsheets_dict_records.get(r)
             if gsheets_rec.get('Payment Amount') and int(gsheets_rec['Payment Amount']) > 0:
-                gsheets_rec['Payment Method'] = 'cash'
-                if stripe_dict_records.get(r):
-                    gsheets_rec['Payment Method'] = 'Stripe'
-                    date_str = stripe_dict_records.get(r).get('Created (UTC)')
-                    self.find_latest_payment(gsheets_rec, date_str, should_be_paid_by_date)
-                if paypal_dict_records.get(r):
-                    gsheets_rec['Payment Method'] = 'PayPal'
-                    date_str = paypal_dict_records.get(r).get('Date')
-                    self.find_latest_payment(gsheets_rec, date_str, should_be_paid_by_date)
+                gsheets_rec['Payment Method'] = 'unknown'
+                # Eddy Schenderlein ?
+                if gsheets_rec['Email'] in ['litchfield.ken@gmail.com', 'thalula@peralta.edu', 'natarajn@aol.com']:
+                    gsheets_rec['Payment Method'] = 'cash'
+                else:
+                    if stripe_dict_records.get(r):
+                        gsheets_rec['Payment Method'] = 'Stripe'
+                        date_str = stripe_dict_records.get(r).get('Created (UTC)')
+                        self.find_latest_payment(gsheets_rec, date_str, should_be_paid_by_date)
+                    else:
+                        if paypal_dict_records.get(r):
+                            gsheets_rec['Payment Method'] = 'PayPal'
+                            date_str = paypal_dict_records.get(r).get('Date')
+                            self.find_latest_payment(gsheets_rec, date_str, should_be_paid_by_date)
 
     def get_record_key(self, array_record):
         lpd = ''
