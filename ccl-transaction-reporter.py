@@ -88,16 +88,36 @@ class Reporter:
             tdiff = should_be_paid_by_date - last_paid_date
             gsheets_rec['Days Delinquent'] = str(tdiff.days)
 
+    stripe_email_to_ccl_email_map = {
+        'junk1' : 'jonathanbutler@protomail.com',
+        'junk2' : 'jessicakarma@gmail.com',
+        'junk3' : 'arianaccisneros@gmail.com',
+        'junk4' : 'pat.coffey@gmail.com',
+        'junk5' : 'mgabiati@gmail.com',
+        'junk6' : 'alexandra.c.hay@gmail.com',
+        'junk7' : 'debbiej.klein@gmail.com',
+        'junk8' : 'josh.mcmenemy@gmail.com',
+        'junk9' : 'paul.millet@hotmail.com',
+        'junk10' : 'kingmushrooms@gmail.com',
+        'junk11' : 'arin.pavlov@gmail.com',
+        'junk12' : 'tiarenoelle@gmail.com',
+        'junk13' : 'pupusworm@gmail.com',
+        'junk14' : 'nsipplswezey@gmail.com',
+        'junk15' : 'jcs.ces@gmail.com',
+    }
+
     def merge_payment_dates(self, stripe_dict_records, paypal_dict_records):
         should_be_paid_by_date = datetime.datetime.now().replace(day=10)
         for r in self.gsheets_dict_records.keys():
             gsheets_rec = self.gsheets_dict_records.get(r)
             gsheets_rec['Payment Method'] = 'n/a'
             if gsheets_rec.get('Payment Amount') and int(gsheets_rec['Payment Amount']) > 0:
-                gsheets_rec['Payment Method'] = 'unknown'
                 if gsheets_rec['Email'] in ['litchfield.ken@gmail.com', 'thalula@peralta.edu', 'natarajn@aol.com', 'nenufarmoleculesforlife@gmail.com']:
                     gsheets_rec['Payment Method'] = 'cash'
                 else:
+                    ccl_email = self.stripe_email_to_ccl_email_map.get(stripe_dict_records.get('Customer Email'))
+                    if ccl_email and not ccl_email == '':
+                        r = stripe_dict_records.get('Customer Email')
                     if stripe_dict_records.get(r):
                         gsheets_rec['Payment Method'] = 'Stripe'
                         date_str = stripe_dict_records.get(r).get('Created (UTC)')
@@ -107,6 +127,8 @@ class Reporter:
                             gsheets_rec['Payment Method'] = 'PayPal'
                             date_str = paypal_dict_records.get(r).get('Date')
                             self.find_latest_payment(gsheets_rec, date_str, should_be_paid_by_date)
+                        else:
+                            gsheets_rec['Payment Method'] = 'unknown'
 
     def get_record_key(self, array_record):
         lpd = ''
