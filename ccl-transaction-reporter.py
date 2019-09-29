@@ -172,14 +172,25 @@ class Reporter:
         field_names = ['Email', 'In Stripe', 'In Google Sheet', 'Stripe payment date', 'Notes']
         field_indices = {'Email' : 1, "In Stripe": 2, 'In Google Sheet' : 3,
             'Stripe payment date' : 4, 'Notes' : 5}
-        out_file_name = 'full_email_list.csv'
+        self.write_dict_to_csv('full_email_list.csv', field_names, master_list)
+
+    def write_dict_to_csv(self, out_file_name, field_names, dict):
         with open(out_file_name, 'w', newline='') as outfile:
             writer = csv.DictWriter(outfile, field_names, delimiter=',', quotechar='"',
                                     quoting=csv.QUOTE_MINIMAL)
             writer.writeheader()
-            for record in master_list.items():
+            for record in dict.items():
                 writer.writerow(record[1])
-        log(str("{: >4d}".format(len(master_list))) + ' records written to ' + out_file_name)
+        log(str("{: >4d}".format(len(dict))) + ' records written to ' + out_file_name)
+
+    def write_unknown_stripe_emails(self, stripe_dict_records):
+        unknown_emails = {}
+        for k in stripe_dict_records.keys():
+            if not self.gsheets_dict_records.get(k):
+                unknown_emails[k] = {'Email' : k, 'Stripe payment date' : ''}
+        field_names = ['Email', 'Stripe payment date']
+        field_indices = {'Email' : 1, 'Stripe payment date' : 2}
+        self.write_dict_to_csv('unknown_stripe_emails.csv', field_names, unknown_emails)
 
     def main(self):
         self.gsheets_fieldnames, self.gsheets_dict_records = self.read_from_stream_into_dict(
@@ -207,6 +218,7 @@ class Reporter:
         self.merge_payment_dates(stripe_dict_records, paypal_dict_records)
         self.write_payment_statuses()
         self.write_full_email_list(stripe_dict_records)
+        self.write_unknown_stripe_emails(stripe_dict_records)
 
 if '__main__' == __name__:
     Reporter().main()
