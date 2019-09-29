@@ -187,7 +187,7 @@ class Reporter:
         unknown_emails = {}
         for k in stripe_dict_records.keys():
             if not self.gsheets_dict_records.get(k):
-                unknown_emails[k] = {'Email' : k, 'Stripe payment date' : ''}
+                unknown_emails[k] = {'Email' : k, 'Stripe payment date' : stripe_dict_records[k]['Created (UTC)'] }
         field_names = ['Email', 'Stripe payment date']
         field_indices = {'Email' : 1, 'Stripe payment date' : 2}
         self.write_dict_to_csv('unknown_stripe_emails.csv', field_names, unknown_emails)
