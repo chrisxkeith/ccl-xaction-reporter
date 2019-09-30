@@ -200,6 +200,11 @@ class Reporter:
                             gsheets_rec['Payment Method'] = 'unknown'
 
     def write_payment_statuses(self):
+        c = 0
+        for r in self.gsheets_dict_records.values():
+            if r.get('Status') == 'Current':
+                c += 1
+        self.gsheets_fieldnames.append('Current members: ' + str(c))
         out_file_name = 'payment_statuses.csv'
         with open(out_file_name, 'w', newline='') as outfile:
             writer = csv.DictWriter(outfile, self.gsheets_fieldnames, delimiter=',', quotechar='"',
