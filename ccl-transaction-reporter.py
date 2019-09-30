@@ -51,9 +51,13 @@ class Reporter:
                 self.find_latest_record(dict, record, record['From Email Address'], 'Date')
 
     def handle_members(self, dict, record):
-        record['Email'] = record['Email'].strip()
-        record['Days Delinquent'] = ' '
-        record['Last Payment Date'] = ' '
+        for n in ['Expected Payment Amount',
+                'Last Payment Date',
+                'Last Payment Amount',
+                'Days Delinquent',
+                'Payment Method',
+            ]:
+            record[n] = ''
         dict[record['Email']] = record
 
     def read_from_stream_into_dict(self, file_name, dict_processing_funct):
@@ -66,20 +70,6 @@ class Reporter:
                 dict_processing_funct(dict, record)
         log(str("{: >4d}".format(len(dict))) + ' records read from ' + file_name)
         return fieldnames, dict 
-
-    def to_array(self, dict_record):
-        arr = []
-        for key, value in dict_record.items():
-            arr.insert(self.field_indices[key], value)
-        return arr
-
-    def to_dict(self, array_record):
-        dict_record = {}
-        i = 0
-        for v in array_record:
-            dict_record[self.field_names_dict[i]] = v
-            i += 1
-        return dict_record
 
     def find_latest_payment(self, gsheets_rec, date_str, should_be_paid_by_date):
         gsheets_rec['Last Payment Date'] = date_str
@@ -182,54 +172,42 @@ class Reporter:
         }
         for k, v in payment_amounts.items():
             if self.gsheets_dict_records.get(k):
-                self.gsheets_dict_records.get(k)['Payment Amount'] = str(v)
+                self.gsheets_dict_records.get(k)['Expected Payment Amount'] = str(v)
     
     def merge_payment_dates(self, stripe_dict_records, paypal_dict_records):
         should_be_paid_by_date = datetime.datetime.now().replace(day=10)
         for r in self.gsheets_dict_records.keys():
             gsheets_rec = self.gsheets_dict_records.get(r)
             gsheets_rec['Payment Method'] = 'n/a'
-            if gsheets_rec.get('Payment Amount') and int(gsheets_rec['Payment Amount']) > 0:
+            if gsheets_rec.get('Expected Payment Amount') and int(gsheets_rec['Expected Payment Amount']) > 0:
                 if gsheets_rec['Email'] in ['litchfield.ken@gmail.com', 'thalula@peralta.edu', 'natarajn@aol.com', 'nenufarmoleculesforlife@gmail.com']:
                     gsheets_rec['Payment Method'] = 'cash'
                 else:
                     if stripe_dict_records.get(r):
+                        stripe_rec = stripe_dict_records.get(r)
                         gsheets_rec['Payment Method'] = 'Stripe'
-                        date_str = stripe_dict_records.get(r).get('Created (UTC)')
+                        date_str = stripe_rec.get('Created (UTC)')
                         self.find_latest_payment(gsheets_rec, date_str, should_be_paid_by_date)
+                        gsheets_rec['Last Payment Amount'] = stripe_rec.get('Amount')
                     else:
                         if paypal_dict_records.get(r):
+                            paypal_rec = paypal_dict_records.get(r)
                             gsheets_rec['Payment Method'] = 'PayPal'
-                            date_str = paypal_dict_records.get(r).get('Date')
+                            date_str = paypal_rec.get('Date')
                             self.find_latest_payment(gsheets_rec, date_str, should_be_paid_by_date)
+                            gsheets_rec['Last Payment Amount'] = paypal_rec.get('Gross')
                         else:
                             gsheets_rec['Payment Method'] = 'unknown'
 
-    def get_record_key(self, array_record):
-        lpd = ''
-        if len(array_record) > self.field_indices['Last Payment Date'] and array_record[self.field_indices['Last Payment Date']]:
-            lpd = array_record[self.field_indices['Last Payment Date']]
-        return array_record[self.field_indices['Status']] + ' ' + lpd
-
     def write_payment_statuses(self):
-        array_records = []
-        for r in self.gsheets_dict_records.values():
-            array_records.append(self.to_array(r))
-        sorted_by_value = sorted(array_records, key=self.get_record_key)
-        self.gsheets_fieldnames.append('Last Payment Date')
-        self.gsheets_fieldnames.append('Days Delinquent')
-        self.gsheets_fieldnames.append('Payment Method')
         out_file_name = 'payment_statuses.csv'
         with open(out_file_name, 'w', newline='') as outfile:
             writer = csv.DictWriter(outfile, self.gsheets_fieldnames, delimiter=',', quotechar='"',
                                     quoting=csv.QUOTE_MINIMAL)
             writer.writeheader()
-            c = 0
-            for record in sorted_by_value:
-                the_dict = self.to_dict(record)
-                writer.writerow(the_dict)
-                c += 1
-        log(str("{: >4d}".format(c)) + ' records written to ' + out_file_name)
+            for record in self.gsheets_dict_records.values():
+                writer.writerow(record)
+        log(str("{: >4d}".format(len(self.gsheets_dict_records))) + ' records written to ' + out_file_name)
 
     def write_full_email_list(self, stripe_dict_records):
         master_list = {}
@@ -267,10 +245,33 @@ class Reporter:
         field_indices = {'Email' : 1, 'Stripe payment date' : 2}
         self.write_dict_to_csv('unknown_stripe_emails.csv', field_names, unknown_emails)
 
+    def setup_columns(self):
+        self.gsheets_fieldnames = [
+            'First Name',
+            'Family (Last) Name',
+            'Email',
+            'Status',
+            'Expected Payment Amount',
+            'Last Payment Date',
+            'Last Payment Amount',
+            'Days Delinquent',
+            'Payment Method',
+            'Notes',
+            'Membership Agreement Date',
+            'Address',
+            'Phone',
+        ]
+        i = 0
+        for field_name in self.gsheets_fieldnames:
+            self.field_indices[field_name] = i
+            self.field_names_dict[i] = field_name
+            i += 1
+
     def main(self):
         self.gsheets_fieldnames, self.gsheets_dict_records = self.read_from_stream_into_dict(
             'Member list for export for python report - Sheet1.csv',
             self.handle_members)
+        self.setup_columns()
         self.update_statuses()
         self.update_payment_amounts()
         stripe_fieldnames, stripe_dict_records = self.read_from_stream_into_dict(
@@ -279,19 +280,6 @@ class Reporter:
         paypal_fieldnames, paypal_dict_records = self.read_from_stream_into_dict(
             'PayPalData2019.csv',
             self.handle_paypal)
-        i = 0
-        for field_name in self.gsheets_fieldnames:
-            self.field_indices[field_name] = i
-            self.field_names_dict[i] = field_name
-            i += 1
-        self.field_indices['Last Payment Date'] = i        
-        self.field_names_dict[i] = 'Last Payment Date'
-        i += 1
-        self.field_indices['Days Delinquent'] = i        
-        self.field_names_dict[i] = 'Days Delinquent'
-        i += 1
-        self.field_indices['Payment Method'] = i       
-        self.field_names_dict[i] = 'Payment Method'
         self.merge_payment_dates(stripe_dict_records, paypal_dict_records)
         self.write_payment_statuses()
         self.write_full_email_list(stripe_dict_records)
