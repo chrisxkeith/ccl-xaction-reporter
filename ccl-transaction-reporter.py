@@ -14,7 +14,7 @@ class Reporter:
     gsheets_fieldnames = []
     gsheets_dict_records = {}
     paypal_to_membership_email_mapping = {'rolfvw@pizzicato.com' : 'rolfvw@gmail.com', 'alan@halo.nu' : 'alanrockefeller@gmail.com'}
-    # cancelled membership: 'matthew.stewart.mi@gmail.com' : 'codehesionoakland@gmail.com'
+    # Cancelled membership: 'matthew.stewart.mi@gmail.com' : 'codehesionoakland@gmail.com'
 
     def to_std_date_fmt(self, date_str):
         mon, day, year = date_str.split('/')
@@ -88,24 +88,102 @@ class Reporter:
             tdiff = should_be_paid_by_date - last_paid_date
             gsheets_rec['Days Delinquent'] = str(tdiff.days)
 
-    stripe_email_to_ccl_email_map = {
-        'junk1' : 'jonathanbutler@protomail.com',
-        'junk2' : 'jessicakarma@gmail.com',
-        'junk3' : 'arianaccisneros@gmail.com',
-        'junk4' : 'pat.coffey@gmail.com',
-        'junk5' : 'mgabiati@gmail.com',
-        'junk6' : 'alexandra.c.hay@gmail.com',
-        'junk7' : 'debbiej.klein@gmail.com',
-        'junk8' : 'josh.mcmenemy@gmail.com',
-        'junk9' : 'paul.millet@hotmail.com',
-        'junk10' : 'kingmushrooms@gmail.com',
-        'junk11' : 'arin.pavlov@gmail.com',
-        'junk12' : 'tiarenoelle@gmail.com',
-        'junk13' : 'pupusworm@gmail.com',
-        'junk14' : 'nsipplswezey@gmail.com',
-        'junk15' : 'jcs.ces@gmail.com',
-    }
+    def update_statuses(self):
+        status_overrides = {
+            'jonathanbutler@protomail.com' : 'Cancelled',
+            'jessicakarma@gmail.com' : 'Cancelled',
+            'josh.mcmenemy@gmail.com' : 'Pending',
+            'arin.pavlov@gmail.com' : 'Cancelled',
+            'tiarenoelle@gmail.com' : 'Cancelled',
+            '???' : 'Cancelled',
+            'pupusworm@gmail.com' : 'Cancelled',
+            'pat.coffey@gmail.com' : 'Cancelled',
+            'alexandra.c.hay@gmail.com' : 'Pending',
+            'ferrinmax@gmail.com' : 'Pending',
+            'graceharrisj@gmail.com' : 'Pending',
+            'chris.keith@gmail.com' : 'Pending',
+            'linalee128@gmail.com' : 'Pending',
+            'andrew.mathau@gmail.com' : 'Pending',
+            'receipts@ianmatthews.com' : 'Pending',
+            'mattpallota5@gmail.com' : 'Pending',
+            'jonathan.ling.pan@???' : 'Pending',
+            'petersongarrettjames@gmail.com' : 'Pending',
+            'dansantos88@gmail.com' : 'Pending',
+            'harte.singer@gmail.com' : 'Pending',
+            'supernovatova@gmail.com' : 'Pending',
+            'aprilsteed@gmail.com' : 'Pending',
+        }
+        for k, v in status_overrides.items():
+            if self.gsheets_dict_records.get(k):
+                self.gsheets_dict_records.get(k)['Status'] = v
 
+    def update_payment_amounts(self):
+        payment_amounts = {
+            'mgabiati@gmail.com' : '80',
+            'alexandra.c.hay@gmail.com' : '80',
+            'debbiej.klein@gmail.com' : '80',
+            'josh.mcmenemy@gmail.com' : '80',
+            'paul.millet@hotmail.com' : '80',
+            'aleclourenco@gmail.com' : '80',
+            'di.franco@gmail.com' : '80',
+            'sudohumans@juul.io' : '80',
+            'gustometry@gmail.com' : '80',
+            'daniel@everflux.tech' : '80',
+            'josiah.zayner@gmail.com' : '80',
+            'tim.dobbs@gmail.com' : '80',
+            'rikke.c.rasmussen@gmail.com' : '80',
+            'andreas.j.albrecht@gmail.com' : '80',
+            'ajiboyeifedayo@gmail.com' : '80',
+            'ramy.kim@gmail.com' : '80',
+            'david@tinialloy.com' : '80',
+            'iva.brzon@gmail.com' : '80',
+            'ddigor@well.com' : '80',
+            'dcandrsn@aol.com' : '80',
+            'jacob.statnekov@gmail.com' : '80',
+            'stharlow@gmail.com' : '80',
+            'pellaea@gmail.com' : '80',
+            'dougchang25@gmail.com' : '80',
+            'jwelcher@gmail.com' : '80',
+            'rolfvw@gmail.com' : '80',
+            'thalula@peralta.edu' : '80',
+            'natarajn@aol.com' : '80',
+            'muldavin.m@gmail.com' : '50',
+            'lbmenchaca@berkeley.edu' : '40',
+            'nenufarmoleculesforlife@gmail.com' : '40',
+            'cassady3@tdl.com' : '30',
+            'alanrockefeller@gmail.com' : '25',
+            'arianaccisneros@gmail.com' : '20',
+            'kingmushrooms@gmail.com' : '20',
+            'arin.pavlov@gmail.com' : '20',
+            'tiarenoelle@gmail.com' : '20',
+            'nsipplswezey@gmail.com' : '20',
+            'jcs.ces@gmail.com' : '20',
+            'tinaekhtiar@gmail.com' : '20',
+            'spiritoftwotimes@gmail.com' : '20',
+            'chrisken@gmail.com' : '20',
+            'jjeasterday6@gmail.com' : '20',
+            'thornton.thompson@gmail.com' : '20',
+            'arent1506@gmail.com' : '20',
+            'jlampe18@gmail.com' : '20',
+            'richard.h.ho@gmail.com' : '20',
+            'christophernoel84@gmail.com' : '20',
+            'litchfield.ken@gmail.com' : '20',
+            'jakekeithkeller@gmail.com' : '10',
+            'cherylching26@gmail.com' : '10',
+            'ivelinavramov@gmail.com' : '0',
+            'noelcarrascal@gmail.com' : '0',
+            'ceremona@gmail.com' : '0',
+            'patrikd@gmail.com' : '0',
+            'Matt.lims@gmail.com' : '0', # TBD : Should this be all lowercase?
+            'tomahawk.jara@gmail.com' : '0',
+            'bobbie2882@gmail.com' : '0',
+            'joelmartinez@springmail.com' : '0',
+            'jnr424@gmail.com' : '0',
+        }
+        for k, v in payment_amounts.items():
+            if self.gsheets_dict_records.get(k):
+                self.gsheets_dict_records.get(k)['Payment Amount'] = str(v)
+    
     def merge_payment_dates(self, stripe_dict_records, paypal_dict_records):
         should_be_paid_by_date = datetime.datetime.now().replace(day=10)
         for r in self.gsheets_dict_records.keys():
@@ -115,9 +193,6 @@ class Reporter:
                 if gsheets_rec['Email'] in ['litchfield.ken@gmail.com', 'thalula@peralta.edu', 'natarajn@aol.com', 'nenufarmoleculesforlife@gmail.com']:
                     gsheets_rec['Payment Method'] = 'cash'
                 else:
-                    ccl_email = self.stripe_email_to_ccl_email_map.get(stripe_dict_records.get('Customer Email'))
-                    if ccl_email and not ccl_email == '':
-                        r = stripe_dict_records.get('Customer Email')
                     if stripe_dict_records.get(r):
                         gsheets_rec['Payment Method'] = 'Stripe'
                         date_str = stripe_dict_records.get(r).get('Created (UTC)')
@@ -196,6 +271,8 @@ class Reporter:
         self.gsheets_fieldnames, self.gsheets_dict_records = self.read_from_stream_into_dict(
             'Member list for export for python report - Sheet1.csv',
             self.handle_members)
+        self.update_statuses()
+        self.update_payment_amounts()
         stripe_fieldnames, stripe_dict_records = self.read_from_stream_into_dict(
             'STRIPE_unified_payments.csv',
             self.handle_stripe)
