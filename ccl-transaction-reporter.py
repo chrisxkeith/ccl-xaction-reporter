@@ -16,14 +16,11 @@ class Reporter:
     paypal_to_membership_email_mapping = {'rolfvw@pizzicato.com' : 'rolfvw@gmail.com', 'alan@halo.nu' : 'alanrockefeller@gmail.com'}
     # Cancelled membership: 'matthew.stewart.mi@gmail.com' : 'codehesionoakland@gmail.com'
 
-    def to_std_date_fmt(self, date_str):
-        mon, day, year = date_str.split('/')
-        dt = datetime.datetime(int('20' + year), int(mon), int(day), 0, 0, 0)
-        return dt.strftime('%Y/%m/%d')
-
     def stripe_date(self, datetime_str):
         date_str, time_str = datetime_str.split(' ')
-        return self.to_std_date_fmt(date_str)
+        year, month, day = date_str.split('-')
+        dt = datetime.datetime(int(year), int(month), int(day), 0, 0, 0)
+        return dt.strftime('%Y/%m/%d')
 
     def find_latest_record(self, dict, record, email, date_col_name):
         # - compare timestamps, keep latest payment record.
@@ -36,9 +33,10 @@ class Reporter:
             dict[email.strip()] = record
 
     def handle_stripe(self, dict, record):
-        junk, email = record['Customer Description'].split('|')
-        record['Created (UTC)'] = self.stripe_date(record['Created (UTC)'])
-        self.find_latest_record(dict, record, email, 'Created (UTC)')
+        if '|' in record['Customer Description']:
+            junk, email = record['Customer Description'].split('|')
+            record['Created (UTC)'] = self.stripe_date(record['Created (UTC)'])
+            self.find_latest_record(dict, record, email, 'Created (UTC)')
 
     def handle_paypal(self, dict, record):
         if 'Credit' == record['Balance Impact']:
@@ -47,7 +45,9 @@ class Reporter:
             # Test Type and Note columns to detect if this is a membership dues payment.
             if 'ubscription' in record['Type'] or 'ember' in record['Note'] or 'ues' in record['Note'] \
                     or self.gsheets_dict_records.get(record['From Email Address']):
-                record['Date'] = self.to_std_date_fmt(record['Date'])
+                mon, day, year = record['Date'].split('/')
+                dt = datetime.datetime(int(year), int(mon), int(day), 0, 0, 0)
+                record['Date'] =  dt.strftime('%Y/%m/%d')
                 self.find_latest_record(dict, record, record['From Email Address'], 'Date')
 
     def get_delinquent_column_header(self):
@@ -69,8 +69,15 @@ class Reporter:
         with open(file_name, 'r', newline='') as infile:
             reader = csv.DictReader(infile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             fieldnames = reader.fieldnames
-            for record in reader:
-                dict_processing_funct(dict, record)
+            c = 1
+            try:
+                # Kludge around this error (Mac file ending char?):
+                # UnicodeDecodeError: 'charmap' codec can't decode byte 0x81 in position 2340: character maps to <undefined>
+                for record in reader:
+                    dict_processing_funct(dict, record)
+                    c += 1
+            except:
+                print('Failed on record ' + str(c))
         log(str("{: >4d}".format(len(dict))) + ' records read from ' + file_name)
         return fieldnames, dict 
 
@@ -282,10 +289,10 @@ class Reporter:
         self.update_statuses()
         self.update_payment_amounts()
         stripe_fieldnames, stripe_dict_records = self.read_from_stream_into_dict(
-            'STRIPE_unified_payments.csv',
+            'STRIPE_payments2019.csv',
             self.handle_stripe)
         paypal_fieldnames, paypal_dict_records = self.read_from_stream_into_dict(
-            'PayPalData2019.csv',
+            'PayPal_Payments2019.csv',
             self.handle_paypal)
         self.merge_payment_dates(stripe_dict_records, paypal_dict_records)
         self.write_payment_statuses()
