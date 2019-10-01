@@ -50,11 +50,24 @@ class Reporter:
                 record['Date'] = self.to_std_date_fmt(record['Date'])
                 self.find_latest_record(dict, record, record['From Email Address'], 'Date')
 
+    due_on_date = None
+    def get_due_on_date(self):
+        # On the off chance that this is run over midnight, use a consistent date.
+        if not self.due_on_date:
+            self.due_on_date = datetime.datetime.now().replace(day=10)
+            if self.due_on_date > datetime.datetime.now():
+                self.due_on_date = self.due_on_date.replace(day=1) - datetime.timedelta(days=1)
+                self.due_on_date = self.due_on_date.replace(day=10)
+        return self.due_on_date
+
+    def get_delinquent_column_header(self):
+        return 'Days Delinquent (due on ' + self.get_due_on_date().strftime('%Y/%m/%d') + ')'
+
     def handle_members(self, dict, record):
         for n in ['Expected Payment Amount',
                 'Last Payment Date',
                 'Last Payment Amount',
-                'Days Delinquent',
+                self.get_delinquent_column_header(),
                 'Payment Method',
             ]:
             record[n] = ''
@@ -76,7 +89,7 @@ class Reporter:
         last_paid_date = datetime.datetime.strptime(date_str, '%Y/%m/%d')
         if last_paid_date < should_be_paid_by_date:
             tdiff = should_be_paid_by_date - last_paid_date
-            gsheets_rec['Days Delinquent'] = str(tdiff.days)
+            gsheets_rec[self.get_delinquent_column_header()] = str(tdiff.days)
 
     def update_statuses(self):
         status_overrides = {
@@ -175,7 +188,7 @@ class Reporter:
                 self.gsheets_dict_records.get(k)['Expected Payment Amount'] = str(v)
     
     def merge_payment_dates(self, stripe_dict_records, paypal_dict_records):
-        should_be_paid_by_date = datetime.datetime.now().replace(day=10)
+        should_be_paid_by_date = self.get_due_on_date()
         for r in self.gsheets_dict_records.keys():
             gsheets_rec = self.gsheets_dict_records.get(r)
             gsheets_rec['Payment Method'] = 'n/a'
@@ -259,7 +272,7 @@ class Reporter:
             'Expected Payment Amount',
             'Last Payment Date',
             'Last Payment Amount',
-            'Days Delinquent',
+            self.get_delinquent_column_header(),
             'Payment Method',
             'Notes',
             'Membership Agreement Date',
