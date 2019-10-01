@@ -50,18 +50,8 @@ class Reporter:
                 record['Date'] = self.to_std_date_fmt(record['Date'])
                 self.find_latest_record(dict, record, record['From Email Address'], 'Date')
 
-    due_on_date = None
-    def get_due_on_date(self):
-        # On the off chance that this is run over midnight, use a consistent date.
-        if not self.due_on_date:
-            self.due_on_date = datetime.datetime.now().replace(day=10)
-            if self.due_on_date > datetime.datetime.now():
-                self.due_on_date = self.due_on_date.replace(day=1) - datetime.timedelta(days=1)
-                self.due_on_date = self.due_on_date.replace(day=10)
-        return self.due_on_date
-
     def get_delinquent_column_header(self):
-        return 'Days Delinquent (due on ' + self.get_due_on_date().strftime('%Y/%m/%d') + ')'
+        return 'Months Delinquent'
 
     def handle_members(self, dict, record):
         for n in ['Expected Payment Amount',
@@ -84,12 +74,12 @@ class Reporter:
         log(str("{: >4d}".format(len(dict))) + ' records read from ' + file_name)
         return fieldnames, dict 
 
-    def find_latest_payment(self, gsheets_rec, date_str, should_be_paid_by_date):
+    def find_latest_payment(self, gsheets_rec, date_str):
         gsheets_rec['Last Payment Date'] = date_str
         last_paid_date = datetime.datetime.strptime(date_str, '%Y/%m/%d')
-        if last_paid_date < should_be_paid_by_date:
-            tdiff = should_be_paid_by_date - last_paid_date
-            gsheets_rec[self.get_delinquent_column_header()] = str(tdiff.days)
+        tdiff = datetime.datetime.now() - last_paid_date
+        if (tdiff.days > 30):
+            gsheets_rec[self.get_delinquent_column_header()] = str(int(tdiff.days / 30)) # approximate months, not exact.
 
     def update_statuses(self):
         status_overrides = {
@@ -188,7 +178,6 @@ class Reporter:
                 self.gsheets_dict_records.get(k)['Expected Payment Amount'] = str(v)
     
     def merge_payment_dates(self, stripe_dict_records, paypal_dict_records):
-        should_be_paid_by_date = self.get_due_on_date()
         for r in self.gsheets_dict_records.keys():
             gsheets_rec = self.gsheets_dict_records.get(r)
             gsheets_rec['Payment Method'] = 'n/a'
@@ -200,14 +189,14 @@ class Reporter:
                         stripe_rec = stripe_dict_records.get(r)
                         gsheets_rec['Payment Method'] = 'Stripe'
                         date_str = stripe_rec.get('Created (UTC)')
-                        self.find_latest_payment(gsheets_rec, date_str, should_be_paid_by_date)
+                        self.find_latest_payment(gsheets_rec, date_str)
                         gsheets_rec['Last Payment Amount'] = stripe_rec.get('Amount')
                     else:
                         if paypal_dict_records.get(r):
                             paypal_rec = paypal_dict_records.get(r)
                             gsheets_rec['Payment Method'] = 'PayPal'
                             date_str = paypal_rec.get('Date')
-                            self.find_latest_payment(gsheets_rec, date_str, should_be_paid_by_date)
+                            self.find_latest_payment(gsheets_rec, date_str)
                             gsheets_rec['Last Payment Amount'] = paypal_rec.get('Gross')
                         else:
                             gsheets_rec['Payment Method'] = 'unknown'
