@@ -192,7 +192,7 @@ class Reporter:
         for r in self.gsheets_dict_records.keys():
             gsheets_rec = self.gsheets_dict_records.get(r)
             gsheets_rec['Payment Method'] = 'n/a'
-            if gsheets_rec.get('Expected Payment Amount') and int(gsheets_rec['Expected Payment Amount']) > 0:
+            if gsheets_rec['Status'] == 'Current' and gsheets_rec.get('Expected Payment Amount') and int(gsheets_rec['Expected Payment Amount']) > 0:
                 if gsheets_rec['Email'] in ['litchfield.ken@gmail.com', 'thalula@peralta.edu', 'natarajn@aol.com', 'nenufarmoleculesforlife@gmail.com']:
                     gsheets_rec['Payment Method'] = 'cash'
                 else:
@@ -270,8 +270,8 @@ class Reporter:
             'Email',
             'Status',
             'Expected Payment Amount',
-            'Last Payment Date',
             'Last Payment Amount',
+            'Last Payment Date',
             self.get_delinquent_column_header(),
             'Payment Method',
             'Notes',
