@@ -297,12 +297,29 @@ class Reporter:
             self.field_names_dict[i] = field_name
             i += 1
 
+    def merge_old_data(self):
+        old_gsheets_fieldnames, old_gsheets_dict_records = self.read_from_stream_into_dict(
+                'Member list for export for python report - Sheet1.csv',
+                self.handle_members)
+        for r in self.gsheets_dict_records.keys():
+            gsheets_rec = self.gsheets_dict_records.get(r)
+            old_rec = old_gsheets_dict_records[r]
+            for field_name in ['First Name',
+                'Family (Last) Name',
+                'Notes',
+                'Membership Agreement Date',
+                'Address',
+                'Phone',
+            ]:
+                if old_rec.get(field_name):
+                    gsheets_rec[field_name] = old_rec[field_name]
+    
     def main(self):
         if path.exists('payment statuses - payment_statuses.csv'):
             self.gsheets_fieldnames, self.gsheets_dict_records = self.read_from_stream_into_dict(
                 'payment statuses - payment_statuses.csv',
                 self.handle_new_sheet)
-            # TODO : merge appropriate fields from old sheet.
+            self.merge_old_data()
         else:
             self.gsheets_fieldnames, self.gsheets_dict_records = self.read_from_stream_into_dict(
                 'Member list for export for python report - Sheet1.csv',
