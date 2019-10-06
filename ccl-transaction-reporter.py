@@ -61,6 +61,7 @@ class Reporter:
                 'Payment Method',
             ]:
             record[n] = ''
+        record['Email'] = record['Email'].strip()
         dict[record['Email']] = record
 
     def read_from_stream_into_dict(self, file_name, dict_processing_funct):
@@ -229,8 +230,8 @@ class Reporter:
             writer = csv.DictWriter(outfile, self.gsheets_fieldnames, delimiter=',', quotechar='"',
                                     quoting=csv.QUOTE_MINIMAL)
             writer.writeheader()
-            for record in self.gsheets_dict_records.values():
-                writer.writerow(record)
+            for key in sorted(self.gsheets_dict_records.keys()):
+                writer.writerow(self.gsheets_dict_records[key])
         log(str("{: >4d}".format(len(self.gsheets_dict_records))) + ' records written to ' + out_file_name)
 
     def write_full_email_list(self, stripe_dict_records):
