@@ -3,6 +3,8 @@
 import sys
 import csv
 import datetime
+import os.path
+from os import path
 
 def log(message):
     script_name = sys.argv[0]
@@ -62,6 +64,9 @@ class Reporter:
             ]:
             record[n] = ''
         record['Email'] = record['Email'].strip()
+        dict[record['Email']] = record
+
+    def handle_new_sheet(self, dict, record):
         dict[record['Email']] = record
 
     def read_from_stream_into_dict(self, file_name, dict_processing_funct):
@@ -293,9 +298,15 @@ class Reporter:
             i += 1
 
     def main(self):
-        self.gsheets_fieldnames, self.gsheets_dict_records = self.read_from_stream_into_dict(
-            'Member list for export for python report - Sheet1.csv',
-            self.handle_members)
+        if path.exists('payment statuses - payment_statuses.csv'):
+            self.gsheets_fieldnames, self.gsheets_dict_records = self.read_from_stream_into_dict(
+                'payment statuses - payment_statuses.csv',
+                self.handle_new_sheet)
+            # TODO : merge appropriate fields from old sheet.
+        else:
+            self.gsheets_fieldnames, self.gsheets_dict_records = self.read_from_stream_into_dict(
+                'Member list for export for python report - Sheet1.csv',
+                self.handle_members)
         self.setup_columns()
         self.update_statuses()
         self.update_payment_amounts()
