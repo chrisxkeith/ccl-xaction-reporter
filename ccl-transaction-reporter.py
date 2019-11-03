@@ -313,8 +313,8 @@ class Reporter:
             self.handle_paypal)
         self.merge_payment_dates(stripe_dict_records, paypal_dict_records)
         self.write_payment_statuses()
-        self.write_full_email_list(stripe_dict_records)
-        self.write_unknown_stripe_emails(stripe_dict_records)
+#        self.write_full_email_list(stripe_dict_records)
+#        self.write_unknown_stripe_emails(stripe_dict_records)
 
 if '__main__' == __name__:
     Reporter().main()
