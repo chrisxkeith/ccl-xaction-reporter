@@ -109,8 +109,6 @@ class Reporter:
         gsheets_rec['Last Payment Date'] = date_str
         last_paid_date = datetime.datetime.strptime(date_str, '%Y/%m/%d')
         tdiff = datetime.datetime.now() - last_paid_date
-        if 'rolf' in gsheets_rec['Email']:
-            print('fubar')
         if (tdiff.days > 31):
             gsheets_rec[self.get_delinquent_column_header()] = str(int(tdiff.days / 30)) # approximate months, not exact.
 
