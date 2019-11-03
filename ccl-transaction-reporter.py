@@ -76,14 +76,15 @@ class Reporter:
             reader = csv.DictReader(infile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             fieldnames = reader.fieldnames
             c = 1
+            record = {}
             try:
-                # Kludge around this error (Mac file ending char?):
-                # UnicodeDecodeError: 'charmap' codec can't decode byte 0x81 in position 2340: character maps to <undefined>
                 for record in reader:
                     dict_processing_funct(dict, record)
                     c += 1
-            except:
-                print('Failed on record ' + str(c))
+            except Exception as e:
+                print(e)
+                print(file_name + ': Failed on record ' + str(c))
+                print(str(record))
         log(str("{: >4d}".format(len(dict))) + ' records read from ' + file_name)
         return fieldnames, dict 
 
