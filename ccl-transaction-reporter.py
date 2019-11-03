@@ -85,7 +85,7 @@ class Reporter:
                 print(e)
                 print(file_name + ': Failed on record ' + str(c))
                 print(str(record))
-        log(str("{: >4d}".format(len(dict))) + ' records read from ' + file_name)
+        log(str("{: >4d}".format(len(dict))) + ' records read from "' + file_name + '"')
         return fieldnames, dict 
 
     def find_latest_payment(self, gsheets_rec, date_str):
@@ -238,7 +238,7 @@ class Reporter:
             writer.writeheader()
             for key in sorted(self.gsheets_dict_records.keys()):
                 writer.writerow(self.gsheets_dict_records[key])
-        log(str("{: >4d}".format(len(self.gsheets_dict_records))) + ' records written to ' + out_file_name)
+        log(str("{: >4d}".format(len(self.gsheets_dict_records))) + ' records written to "' + out_file_name + '"')
 
     def write_full_email_list(self, stripe_dict_records):
         master_list = {}
@@ -306,11 +306,11 @@ class Reporter:
         self.update_statuses()
         self.update_payment_amounts()
         stripe_fieldnames, stripe_dict_records = self.read_from_stream_into_dict(
-            'STRIPE_payments2019.csv',
-            self.handle_stripe)
+                'STRIPE_payments.csv',
+                self.handle_stripe)
         paypal_fieldnames, paypal_dict_records = self.read_from_stream_into_dict(
-            'PayPal_Payments2019.csv',
-            self.handle_paypal)
+                'PayPal_Payments.csv',
+                self.handle_paypal)
         self.merge_payment_dates(stripe_dict_records, paypal_dict_records)
         self.write_payment_statuses()
 #        self.write_full_email_list(stripe_dict_records)
