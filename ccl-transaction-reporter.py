@@ -40,17 +40,30 @@ class Reporter:
             record['Created (UTC)'] = self.stripe_date(record['Created (UTC)'])
             self.find_latest_record(dict, record, email, 'Created (UTC)')
 
+    def found_dues_note(self, record):
+        if self.gsheets_dict_records.get(record['From Email Address']):
+            return True
+        # Test text in certain columns to detect if this is a membership dues payment.
+        for type in ['Type', 'Note', 'Description']:
+            if record.get(type):
+                return 'ubscription' in record[type] or 'ember' in record[type] or 'ues' in record[type]
+
+    def convert_to_paypal(self, dict, record):
+        if self.found_dues_note(record):
+            mon, day, year = record['Date'].split('/')
+            dt = datetime.datetime(int(year), int(mon), int(day), 0, 0, 0)
+            record['Date'] =  dt.strftime('%Y/%m/%d')
+            self.find_latest_record(dict, record, record['From Email Address'], 'Date')
+
     def handle_paypal(self, dict, record):
-        if 'Credit' == record['Balance Impact']:
-            if self.paypal_to_membership_email_mapping.get(record['From Email Address']):
-                record['From Email Address'] = self.paypal_to_membership_email_mapping.get(record['From Email Address'])
-            # Test Type and Note columns to detect if this is a membership dues payment.
-            if 'ubscription' in record['Type'] or 'ember' in record['Note'] or 'ues' in record['Note'] \
-                    or self.gsheets_dict_records.get(record['From Email Address']):
-                mon, day, year = record['Date'].split('/')
-                dt = datetime.datetime(int(year), int(mon), int(day), 0, 0, 0)
-                record['Date'] =  dt.strftime('%Y/%m/%d')
-                self.find_latest_record(dict, record, record['From Email Address'], 'Date')
+        if self.paypal_to_membership_email_mapping.get(record['From Email Address']):
+            record['From Email Address'] = self.paypal_to_membership_email_mapping.get(record['From Email Address'])
+        if record.get('Balance Impact'):
+            if 'Credit' == record['Balance Impact']:
+                self.convert_to_paypal(dict, record)
+        else:
+            if float(record['Net']) > 0:
+                self.convert_to_paypal(dict, record)
 
     def get_delinquent_column_header(self):
         return 'Months Delinquent'
@@ -82,7 +95,7 @@ class Reporter:
                     dict_processing_funct(dict, record)
                     c += 1
             except Exception as e:
-                print(e)
+                print('Exception: ' + e)
                 print(file_name + ': Failed on record ' + str(c))
                 print(str(record))
         log(str("{: >4d}".format(len(dict))) + ' records read from "' + file_name + '"')
