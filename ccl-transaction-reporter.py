@@ -51,7 +51,11 @@ class Reporter:
     def convert_to_paypal(self, dict, record):
         if self.found_dues_note(record):
             mon, day, year = record['Date'].split('/')
-            dt = datetime.datetime(int(year), int(mon), int(day), 0, 0, 0)
+            year_int = int(year)
+            # Why can't PayPal provide 4-digit years? :(
+            if year_int < 2000:
+                year_int += 2000
+            dt = datetime.datetime(year_int, int(mon), int(day), 0, 0, 0)
             record['Date'] =  dt.strftime('%Y/%m/%d')
             self.find_latest_record(dict, record, record['From Email Address'], 'Date')
 
@@ -105,7 +109,9 @@ class Reporter:
         gsheets_rec['Last Payment Date'] = date_str
         last_paid_date = datetime.datetime.strptime(date_str, '%Y/%m/%d')
         tdiff = datetime.datetime.now() - last_paid_date
-        if (tdiff.days > 30):
+        if 'rolf' in gsheets_rec['Email']:
+            print('fubar')
+        if (tdiff.days > 31):
             gsheets_rec[self.get_delinquent_column_header()] = str(int(tdiff.days / 30)) # approximate months, not exact.
 
     def update_statuses(self):
@@ -116,7 +122,7 @@ class Reporter:
             'aprilsteed@gmail.com' : 'Pending',
             'arin.pavlov@gmail.com' : 'Cancelled',
             'cherylching26@gmail.com' : 'Cancelled',
-            'chris.keith@gmail.com' : 'Pending',
+            'chris.keith@gmail.com' : 'Active',
             'christophernoel84@gmail.com' : 'Cancelled',
             'dansantos88@gmail.com' : 'Pending',
             'ddigor@well.com' : 'Cancelled',
