@@ -111,6 +111,8 @@ class Reporter:
         tdiff = datetime.datetime.now() - last_paid_date
         if (tdiff.days > 31):
             gsheets_rec[self.get_delinquent_column_header()] = str(int(tdiff.days / 30)) # approximate months, not exact.
+        else:
+            gsheets_rec[self.get_delinquent_column_header()] = ''
 
     def update_statuses(self):
         status_overrides = {
