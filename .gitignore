@@ -109,3 +109,4 @@ venv.bak/
 *.txt
 *.sql
 *.mysql
+*.bak
