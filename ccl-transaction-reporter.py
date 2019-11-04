@@ -115,7 +115,6 @@ class Reporter:
     def merge_payment_dates(self, stripe_dict_records, paypal_dict_records):
         for r in self.gsheets_dict_records.keys():
             gsheets_rec = self.gsheets_dict_records.get(r)
-            gsheets_rec['Payment Method'] = 'n/a'
             if gsheets_rec['Status'] == 'Current' and gsheets_rec.get('Expected Payment Amount') and int(gsheets_rec['Expected Payment Amount']) > 0:
                 if stripe_dict_records.get(r):
                     stripe_rec = stripe_dict_records.get(r)
@@ -131,7 +130,8 @@ class Reporter:
                         self.find_latest_payment(gsheets_rec, date_str)
                         gsheets_rec['Last Payment Amount'] = paypal_rec.get('Gross') # TODO, handle new CSV format
                     else:
-                        gsheets_rec['Payment Method'] = 'unknown'
+                        if not gsheets_rec.get('Payment Method'):
+                            gsheets_rec['Payment Method'] = 'unknown'
 
     def write_payment_statuses(self):
         out_file_name = 'payment_statuses.csv'
@@ -217,8 +217,8 @@ class Reporter:
         paypal_fieldnames, paypal_dict_records = self.read_from_stream_into_dict(
                 'PayPal_Payments.csv',
                 self.handle_paypal)
-        self.merge_payment_dates(stripe_dict_records, paypal_dict_records)
         self.add_unknown_stripe_emails(stripe_dict_records)
+        self.merge_payment_dates(stripe_dict_records, paypal_dict_records)
         self.write_payment_statuses()
         self.print_counts()
 
