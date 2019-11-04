@@ -16,7 +16,6 @@ class Reporter:
     gsheets_fieldnames = []
     gsheets_dict_records = {}
     paypal_to_membership_email_mapping = {'rolfvw@pizzicato.com' : 'rolfvw@gmail.com', 'alan@halo.nu' : 'alanrockefeller@gmail.com'}
-    # Cancelled membership: 'matthew.stewart.mi@gmail.com' : 'codehesionoakland@gmail.com'
 
     def stripe_date(self, datetime_str):
         date_str, time_str = datetime_str.split(' ')
@@ -114,142 +113,37 @@ class Reporter:
         else:
             gsheets_rec[self.get_delinquent_column_header()] = ''
 
-    def update_statuses(self):
-        status_overrides = {
-            '???' : 'Cancelled',
-            'alexandra.c.hay@gmail.com' : 'Pending',
-            'andrew.mathau@gmail.com' : 'Cancelled',
-            'aprilsteed@gmail.com' : 'Pending',
-            'arin.pavlov@gmail.com' : 'Cancelled',
-            'cherylching26@gmail.com' : 'Cancelled',
-            'chris.keith@gmail.com' : 'Active',
-            'christophernoel84@gmail.com' : 'Cancelled',
-            'dansantos88@gmail.com' : 'Pending',
-            'ddigor@well.com' : 'Cancelled',
-            'ferrinmax@gmail.com' : 'Pending',
-            'graceharrisj@gmail.com' : 'Pending',
-            'harte.singer@gmail.com' : 'Pending',
-            'jessicakarma@gmail.com' : 'Cancelled',
-            'jonathan.ling.pan@???' : 'Cancelled',
-            'jonathanbutler@protomail.com' : 'Cancelled',
-            'josh.mcmenemy@gmail.com' : 'Cancelled',
-            'jwelcher@gmail.com' : 'Cancelled',
-            'linalee128@gmail.com' : 'Pending',
-            'mattpallota5@gmail.com' : 'Pending',
-            'mgabiati@gmail.com' : 'Cancelled',
-            'pat.coffey@gmail.com' : 'Cancelled',
-            'pellaea@gmail.com' : 'Cancelled',
-            'petersongarrettjames@gmail.com' : 'Pending',
-            'pupusworm@gmail.com' : 'Cancelled',
-            'receipts@ianmatthews.com' : 'Pending',
-            'spiritoftwotimes@gmail.com' : 'Cancelled',
-            'stharlow@gmail.com' : 'Cancelled',
-            'supernovatova@gmail.com' : 'Pending',
-            'thornton.thompson@gmail.com' : 'Cancelled',
-            'tiarenoelle@gmail.com' : 'Cancelled',
-            'tinaekhtiar@gmail.com' : 'Cancelled',
-        }
-        for k, v in status_overrides.items():
-            if self.gsheets_dict_records.get(k):
-                self.gsheets_dict_records.get(k)['Status'] = v
-
-    def update_payment_amounts(self):
-        payment_amounts = {
-            'ajiboyeifedayo@gmail.com' : '80',
-            'alanrockefeller@gmail.com' : '25',
-            'aleclourenco@gmail.com' : '80',
-            'alexandra.c.hay@gmail.com' : '',
-            'andreas.j.albrecht@gmail.com' : '80',
-            'arent1506@gmail.com' : '20',
-            'arianaccisneros@gmail.com' : '20',
-            'arin.pavlov@gmail.com' : '20',
-            'bobbie2882@gmail.com' : '0',
-            'cassady3@tdl.com' : '30',
-            'ceremona@gmail.com' : '0',
-            'cherylching26@gmail.com' : '10',
-            'chrisken@gmail.com' : '20',
-            'christophernoel84@gmail.com' : '20',
-            'daniel@everflux.tech' : '80',
-            'david@tinialloy.com' : '80',
-            'dcandrsn@aol.com' : '80',
-            'ddigor@well.com' : '80',
-            'debbiej.klein@gmail.com' : '80',
-            'di.franco@gmail.com' : '80',
-            'dougchang25@gmail.com' : '80',
-            'gustometry@gmail.com' : '80',
-            'iva.brzon@gmail.com' : '80',
-            'ivelinavramov@gmail.com' : '0',
-            'jacob.statnekov@gmail.com' : '80',
-            'jakekeithkeller@gmail.com' : '10',
-            'jcs.ces@gmail.com' : '20',
-            'jjeasterday6@gmail.com' : '20',
-            'jlampe18@gmail.com' : '20',
-            'jnr424@gmail.com' : '0',
-            'joelmartinez@springmail.com' : '0',
-            'josh.mcmenemy@gmail.com' : '80',
-            'josiah.zayner@gmail.com' : '80',
-            'jwelcher@gmail.com' : '80',
-            'kingmushrooms@gmail.com' : '20',
-            'lbmenchaca@berkeley.edu' : '40',
-            'litchfield.ken@gmail.com' : '20',
-            'Matt.lims@gmail.com' : '0', # TBD : Should this be all lowercase?
-            'mgabiati@gmail.com' : '80',
-            'muldavin.m@gmail.com' : '50',
-            'natarajn@aol.com' : '80',
-            'nenufarmoleculesforlife@gmail.com' : '40',
-            'noelcarrascal@gmail.com' : '0',
-            'nsipplswezey@gmail.com' : '20',
-            'patrikd@gmail.com' : '0',
-            'paul.millet@hotmail.com' : '80',
-            'pellaea@gmail.com' : '80',
-            'ramy.kim@gmail.com' : '80',
-            'richard.h.ho@gmail.com' : '20',
-            'rikke.c.rasmussen@gmail.com' : '80',
-            'rolfvw@gmail.com' : '80',
-            'spiritoftwotimes@gmail.com' : '20',
-            'stharlow@gmail.com' : '80',
-            'sudohumans@juul.io' : '80',
-            'thalula@peralta.edu' : '80',
-            'thornton.thompson@gmail.com' : '20',
-            'tiarenoelle@gmail.com' : '20',
-            'tim.dobbs@gmail.com' : '80',
-            'tinaekhtiar@gmail.com' : '20',
-            'tomahawk.jara@gmail.com' : '0',
-        }
-        for k, v in payment_amounts.items():
-            if self.gsheets_dict_records.get(k):
-                self.gsheets_dict_records.get(k)['Expected Payment Amount'] = str(v)
-    
     def merge_payment_dates(self, stripe_dict_records, paypal_dict_records):
         for r in self.gsheets_dict_records.keys():
             gsheets_rec = self.gsheets_dict_records.get(r)
             gsheets_rec['Payment Method'] = 'n/a'
             if gsheets_rec['Status'] == 'Current' and gsheets_rec.get('Expected Payment Amount') and int(gsheets_rec['Expected Payment Amount']) > 0:
-                if gsheets_rec['Email'] in ['litchfield.ken@gmail.com', 'thalula@peralta.edu', 'natarajn@aol.com', 'nenufarmoleculesforlife@gmail.com']:
-                    gsheets_rec['Payment Method'] = 'cash'
+                if stripe_dict_records.get(r):
+                    stripe_rec = stripe_dict_records.get(r)
+                    gsheets_rec['Payment Method'] = 'Stripe'
+                    date_str = stripe_rec.get('Created (UTC)')
+                    self.find_latest_payment(gsheets_rec, date_str)
+                    gsheets_rec['Last Payment Amount'] = stripe_rec.get('Amount')
                 else:
-                    if stripe_dict_records.get(r):
-                        stripe_rec = stripe_dict_records.get(r)
-                        gsheets_rec['Payment Method'] = 'Stripe'
-                        date_str = stripe_rec.get('Created (UTC)')
+                    if paypal_dict_records.get(r):
+                        paypal_rec = paypal_dict_records.get(r)
+                        gsheets_rec['Payment Method'] = 'PayPal'
+                        date_str = paypal_rec.get('Date')
                         self.find_latest_payment(gsheets_rec, date_str)
-                        gsheets_rec['Last Payment Amount'] = stripe_rec.get('Amount')
+                        gsheets_rec['Last Payment Amount'] = paypal_rec.get('Gross')
                     else:
-                        if paypal_dict_records.get(r):
-                            paypal_rec = paypal_dict_records.get(r)
-                            gsheets_rec['Payment Method'] = 'PayPal'
-                            date_str = paypal_rec.get('Date')
-                            self.find_latest_payment(gsheets_rec, date_str)
-                            gsheets_rec['Last Payment Amount'] = paypal_rec.get('Gross')
-                        else:
-                            gsheets_rec['Payment Method'] = 'unknown'
+                        gsheets_rec['Payment Method'] = 'unknown'
 
     def write_payment_statuses(self):
-        c = 0
+        counts = {}
         for r in self.gsheets_dict_records.values():
-            if r.get('Status') == 'Current':
-                c += 1
-        self.gsheets_fieldnames.append('Current members: ' + str(c))
+            status = r.get('Status')
+            if not counts.get(status):
+                counts[status] = 1
+            else:
+                counts[status] += 1
+        for k in counts.keys():
+            print(k + ' members: ' + str(counts[k]))
         out_file_name = 'payment_statuses.csv'
         with open(out_file_name, 'w', newline='') as outfile:
             writer = csv.DictWriter(outfile, self.gsheets_fieldnames, delimiter=',', quotechar='"',
@@ -322,8 +216,6 @@ class Reporter:
                 'payment statuses - payment_statuses.csv',
                 self.handle_new_sheet)
         self.setup_columns()
-        self.update_statuses()
-        self.update_payment_amounts()
         stripe_fieldnames, stripe_dict_records = self.read_from_stream_into_dict(
                 'STRIPE_payments.csv',
                 self.handle_stripe)
