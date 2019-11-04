@@ -12,7 +12,6 @@ def log(message):
 
 class Reporter:
     field_indices = {}
-    field_names_dict = {}
     gsheets_fieldnames = []
     gsheets_dict_records = {}
     paypal_to_membership_email_mapping = {'rolfvw@pizzicato.com' : 'rolfvw@gmail.com', 'alan@halo.nu' : 'alanrockefeller@gmail.com'}
@@ -130,20 +129,11 @@ class Reporter:
                         gsheets_rec['Payment Method'] = 'PayPal'
                         date_str = paypal_rec.get('Date')
                         self.find_latest_payment(gsheets_rec, date_str)
-                        gsheets_rec['Last Payment Amount'] = paypal_rec.get('Gross')
+                        gsheets_rec['Last Payment Amount'] = paypal_rec.get('Gross') # TODO, handle new CSV format
                     else:
                         gsheets_rec['Payment Method'] = 'unknown'
 
     def write_payment_statuses(self):
-        counts = {}
-        for r in self.gsheets_dict_records.values():
-            status = r.get('Status')
-            if not counts.get(status):
-                counts[status] = 1
-            else:
-                counts[status] += 1
-        for k in counts.keys():
-            print(k + ' members: ' + str(counts[k]))
         out_file_name = 'payment_statuses.csv'
         with open(out_file_name, 'w', newline='') as outfile:
             writer = csv.DictWriter(outfile, self.gsheets_fieldnames, delimiter=',', quotechar='"',
@@ -152,24 +142,6 @@ class Reporter:
             for key in sorted(self.gsheets_dict_records.keys()):
                 writer.writerow(self.gsheets_dict_records[key])
         log(str("{: >4d}".format(len(self.gsheets_dict_records))) + ' records written to "' + out_file_name + '"')
-
-    def write_full_email_list(self, stripe_dict_records):
-        master_list = {}
-        for k in stripe_dict_records.keys():
-            master_list[k] = {'Email' : k, 'In Stripe' : 'Y', 'In Google Sheet' : '',
-                'Stripe payment date' : stripe_dict_records[k]['Created (UTC)'],
-                'Notes' : ''}
-        for k in self.gsheets_dict_records.keys():
-            if master_list.get(k):
-                master_list.get(k)['In Google Sheet'] = 'Y'
-                master_list.get(k)['Notes'] = self.gsheets_dict_records[k]['Notes']
-            else:
-                master_list[k] = {'Email' : k, 'In Stripe' : '', 'In Google Sheet' : 'Y',
-                    'Stripe payment date' : '', 'Notes' : self.gsheets_dict_records[k]['Notes'] }
-        field_names = ['Email', 'In Stripe', 'In Google Sheet', 'Stripe payment date', 'Notes']
-        field_indices = {'Email' : 1, "In Stripe": 2, 'In Google Sheet' : 3,
-            'Stripe payment date' : 4, 'Notes' : 5}
-        self.write_dict_to_csv('full_email_list.csv', field_names, master_list)
 
     def write_dict_to_csv(self, out_file_name, field_names, dict):
         with open(out_file_name, 'w', newline='') as outfile:
@@ -180,14 +152,27 @@ class Reporter:
                 writer.writerow(record[1])
         log(str("{: >4d}".format(len(dict))) + ' records written to ' + out_file_name)
 
-    def write_unknown_stripe_emails(self, stripe_dict_records):
-        unknown_emails = {}
+    def create_new_row(self, email):
+        new_row = {}
+        for field in self.gsheets_fieldnames:
+            new_row[field] = ''
+        new_row['Email'] = email
+        return new_row
+
+    def add_unknown_stripe_emails(self, stripe_dict_records):
         for k in stripe_dict_records.keys():
             if not self.gsheets_dict_records.get(k):
-                unknown_emails[k] = {'Email' : k, 'Stripe payment date' : stripe_dict_records[k]['Created (UTC)'] }
-        field_names = ['Email', 'Stripe payment date']
-        field_indices = {'Email' : 1, 'Stripe payment date' : 2}
-        self.write_dict_to_csv('unknown_stripe_emails.csv', field_names, unknown_emails)
+                date_str = stripe_dict_records[k]['Created (UTC)']
+                last_paid_date = datetime.datetime.strptime(date_str, '%Y/%m/%d')
+                tdiff = datetime.datetime.now() - last_paid_date
+                if (tdiff.days < 3 * 31): # consider payments within (approximately) the last three months to be "Current"
+                    print('Adding member from stripe: ' + k)
+                    new_row = self.create_new_row(k)
+                    new_row['Last Payment Date'] = date_str
+                    new_row['Last Payment Amount'] = stripe_dict_records[k]['Amount']
+                    new_row['Status'] = 'Current'
+                    new_row['Payment Method'] = 'Stripe'
+                    self.gsheets_dict_records[k] = new_row
 
     def setup_columns(self):
         self.gsheets_fieldnames = [
@@ -208,8 +193,18 @@ class Reporter:
         i = 0
         for field_name in self.gsheets_fieldnames:
             self.field_indices[field_name] = i
-            self.field_names_dict[i] = field_name
             i += 1
+
+    def print_counts(self):
+        counts = {}
+        for r in self.gsheets_dict_records.values():
+            status = r.get('Status')
+            if not counts.get(status):
+                counts[status] = 1
+            else:
+                counts[status] += 1
+        for k in counts.keys():
+            print(k + ' members: ' + str(counts[k]))
 
     def main(self):
         self.gsheets_fieldnames, self.gsheets_dict_records = self.read_from_stream_into_dict(
@@ -223,9 +218,9 @@ class Reporter:
                 'PayPal_Payments.csv',
                 self.handle_paypal)
         self.merge_payment_dates(stripe_dict_records, paypal_dict_records)
+        self.add_unknown_stripe_emails(stripe_dict_records)
         self.write_payment_statuses()
-#        self.write_full_email_list(stripe_dict_records)
-#        self.write_unknown_stripe_emails(stripe_dict_records)
+        self.print_counts()
 
 if '__main__' == __name__:
     Reporter().main()
