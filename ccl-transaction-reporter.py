@@ -14,7 +14,6 @@ class Reporter:
     field_indices = {}
     gsheets_fieldnames = []
     gsheets_dict_records = {}
-    paypal_to_membership_email_mapping = {'rolfvw@pizzicato.com' : 'rolfvw@gmail.com', 'alan@halo.nu' : 'alanrockefeller@gmail.com'}
 
     def stripe_date(self, datetime_str):
         date_str, time_str = datetime_str.split(' ')
@@ -33,8 +32,18 @@ class Reporter:
             dict[email.strip()] = record
 
     def handle_stripe(self, dict, record):
+        # Email address in Stripe (same applies to PayPal) may be different from email submitted to CCL.
+        # Use the CCL email as the key in the various dicts so data can be merged into gsheets_dict_records.
+        # The key in gsheets_dict_records should be the same as the email in the value (e.g., dict for single record).
+        stripe_to_membership_email_mapping = {
+                'besart_morina@yahoo.com' : 'kingmushrooms@gmail.com', 
+                'jc_smoot@yahoo.com' : 'jcs.ces@gmail.com',
+        }
         if '|' in record['Customer Description']:
             junk, email = record['Customer Description'].split('|')
+            email = email.strip()
+            if stripe_to_membership_email_mapping.get(email):
+                email = stripe_to_membership_email_mapping.get(email)
             record['Created (UTC)'] = self.stripe_date(record['Created (UTC)'])
             self.find_latest_record(dict, record, email, 'Created (UTC)')
 
@@ -45,6 +54,7 @@ class Reporter:
         for type in ['Type', 'Note', 'Description']:
             if record.get(type):
                 return 'ubscription' in record[type] or 'ember' in record[type] or 'ues' in record[type]
+        return False
 
     def convert_to_paypal(self, dict, record):
         if self.found_dues_note(record):
@@ -58,8 +68,12 @@ class Reporter:
             self.find_latest_record(dict, record, record['From Email Address'], 'Date')
 
     def handle_paypal(self, dict, record):
-        if self.paypal_to_membership_email_mapping.get(record['From Email Address']):
-            record['From Email Address'] = self.paypal_to_membership_email_mapping.get(record['From Email Address'])
+        paypal_to_membership_email_mapping = {
+                    'rolfvw@pizzicato.com' : 'rolfvw@gmail.com',
+                    'alan@halo.nu' : 'alanrockefeller@gmail.com',
+        }
+        if paypal_to_membership_email_mapping.get(record['From Email Address']):
+            record['From Email Address'] = paypal_to_membership_email_mapping.get(record['From Email Address'])
         if record.get('Balance Impact'):
             if 'Credit' == record['Balance Impact']:
                 self.convert_to_paypal(dict, record)
