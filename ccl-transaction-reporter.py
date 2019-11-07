@@ -188,7 +188,7 @@ class Reporter:
                     new_row['Payment Method'] = 'Stripe'
                     self.gsheets_dict_records[k] = new_row
 
-    def setup_columns(self):
+    def setup_column_names(self):
         self.gsheets_fieldnames = [
             'First Name',
             'Family (Last) Name',
@@ -220,11 +220,32 @@ class Reporter:
         for k in counts.keys():
             print(k + ' members: ' + str(counts[k]))
 
+    def merge_generated_into_manual_data(self, generated_dict_records):
+        for k, v in generated_dict_records.items():
+            if not self.gsheets_dict_records.get(k):
+                self.gsheets_dict_records[k] = v
+            else:
+                for field_name in self.gsheets_fieldnames:
+                    rec = self.gsheets_dict_records[k]
+                    if not rec.get(field_name):
+                        self.gsheets_dict_records[k][field_name] = v[field_name]
+
+    def add_fields(self):
+        for k, v in self.gsheets_dict_records.items():
+            for field_name in self.gsheets_fieldnames:
+                if not v.get(field_name):
+                    v[field_name] = ''
+
     def main(self):
         self.gsheets_fieldnames, self.gsheets_dict_records = self.read_from_stream_into_dict(
+                'Member list for export - Sheet1.csv',
+                self.handle_new_sheet)
+        self.setup_column_names()
+        self.add_fields()
+        generated_fieldnames, generated_dict_records = self.read_from_stream_into_dict(
                 'payment statuses - payment_statuses.csv',
                 self.handle_new_sheet)
-        self.setup_columns()
+        self.merge_generated_into_manual_data(generated_dict_records)
         stripe_fieldnames, stripe_dict_records = self.read_from_stream_into_dict(
                 'STRIPE_payments.csv',
                 self.handle_stripe)
