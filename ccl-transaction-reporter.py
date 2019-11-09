@@ -40,6 +40,7 @@ class Reporter:
                 'jc_smoot@yahoo.com' : 'jcs.ces@gmail.com',
                 'mattpallotta5@gmail.com' : 'mattpallota5@gmail.com',
                 'receipts@ianmathews.com' : 'receipts@ianmatthews.com',
+                'ivelinavramov@yahoo.com' : 'ivelinavramov@gmail.com',
         }
         if '|' in record['Customer Description']:
             junk, email = record['Customer Description'].split('|')
@@ -67,7 +68,7 @@ class Reporter:
                 year_int += 2000
             dt = datetime.datetime(year_int, int(mon), int(day), 0, 0, 0)
             record['Date'] =  dt.strftime('%Y/%m/%d')
-            record['From Email Address'] = record['From Email Address'].lower()
+            record['From Email Address'] = record['From Email Address'].strip().lower()
             self.find_latest_record(dict, record, record['From Email Address'], 'Date')
 
     def handle_paypal(self, dict, record):
@@ -99,7 +100,7 @@ class Reporter:
         dict[record['Email']] = record
 
     def handle_new_sheet(self, dict, record):
-        record['Email'] = record['Email'].lower()
+        record['Email'] = record['Email'].strip().lower()
         dict[record['Email']] = record
 
     def read_from_stream_into_dict(self, file_name, dict_processing_funct):
@@ -133,13 +134,14 @@ class Reporter:
     def merge_payment_dates(self, stripe_dict_records, paypal_dict_records):
         for r in self.gsheets_dict_records.keys():
             gsheets_rec = self.gsheets_dict_records.get(r)
-            if gsheets_rec['Status'] == 'Current' and gsheets_rec.get('Expected Payment Amount') and int(gsheets_rec['Expected Payment Amount']) > 0:
+            if gsheets_rec['Status'] != "Cancelled":
                 if stripe_dict_records.get(r):
                     stripe_rec = stripe_dict_records.get(r)
                     gsheets_rec['Payment Method'] = 'Stripe'
                     date_str = stripe_rec.get('Created (UTC)')
                     self.find_latest_payment(gsheets_rec, date_str)
                     gsheets_rec['Last Payment Amount'] = stripe_rec.get('Amount')
+                    gsheets_rec['Status'] == 'Current'
                 else:
                     if paypal_dict_records.get(r):
                         paypal_rec = paypal_dict_records.get(r)
@@ -147,6 +149,7 @@ class Reporter:
                         date_str = paypal_rec.get('Date')
                         self.find_latest_payment(gsheets_rec, date_str)
                         gsheets_rec['Last Payment Amount'] = paypal_rec.get('Gross') # TODO, handle new CSV format
+                        gsheets_rec['Status'] == 'Current'
                     else:
                         if not gsheets_rec.get('Payment Method'):
                             gsheets_rec['Payment Method'] = 'unknown'
@@ -225,6 +228,11 @@ class Reporter:
                 counts[status] += 1
         for k in counts.keys():
             print(k + ' members: ' + str(counts[k]))
+        not_in_master_list_count = 0
+        for r in self.gsheets_dict_records.values():
+            if not r.get('First Name'):
+                not_in_master_list_count += 1
+        print('Members not in master list: ' + str(not_in_master_list_count))
 
     def merge_generated_into_manual_data(self, generated_dict_records):
         for k, v in generated_dict_records.items():
