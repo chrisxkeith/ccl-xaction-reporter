@@ -38,10 +38,12 @@ class Reporter:
         stripe_to_membership_email_mapping = {
                 'besart_morina@yahoo.com' : 'kingmushrooms@gmail.com', 
                 'jc_smoot@yahoo.com' : 'jcs.ces@gmail.com',
+                'mattpallotta5@gmail.com' : 'mattpallota5@gmail.com',
+                'receipts@ianmathews.com' : 'receipts@ianmatthews.com',
         }
         if '|' in record['Customer Description']:
             junk, email = record['Customer Description'].split('|')
-            email = email.strip()
+            email = email.strip().lower()
             if stripe_to_membership_email_mapping.get(email):
                 email = stripe_to_membership_email_mapping.get(email)
             record['Created (UTC)'] = self.stripe_date(record['Created (UTC)'])
@@ -65,6 +67,7 @@ class Reporter:
                 year_int += 2000
             dt = datetime.datetime(year_int, int(mon), int(day), 0, 0, 0)
             record['Date'] =  dt.strftime('%Y/%m/%d')
+            record['From Email Address'] = record['From Email Address'].lower()
             self.find_latest_record(dict, record, record['From Email Address'], 'Date')
 
     def handle_paypal(self, dict, record):
@@ -96,6 +99,7 @@ class Reporter:
         dict[record['Email']] = record
 
     def handle_new_sheet(self, dict, record):
+        record['Email'] = record['Email'].lower()
         dict[record['Email']] = record
 
     def read_from_stream_into_dict(self, file_name, dict_processing_funct):
@@ -146,6 +150,8 @@ class Reporter:
                     else:
                         if not gsheets_rec.get('Payment Method'):
                             gsheets_rec['Payment Method'] = 'unknown'
+            if gsheets_rec['Status'] == 'Current' and not gsheets_rec.get('Expected Payment Amount') and not gsheets_rec.get('Last Payment Amount'):
+                gsheets_rec['Status'] = "Pending"
 
     def write_payment_statuses(self):
         out_file_name = 'payment_statuses.csv'
