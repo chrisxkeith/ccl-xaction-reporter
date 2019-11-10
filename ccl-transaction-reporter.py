@@ -122,10 +122,13 @@ class Reporter:
         log(str("{: >4d}".format(len(dict))) + ' records read from "' + file_name + '"')
         return fieldnames, dict 
 
+    ref_date_string = '2019/11/02'
+    # Must manually change when new Stripe/PalPal files are provided.
+    reference_date = datetime.datetime.strptime(ref_date_string, '%Y/%m/%d')
     def find_latest_payment(self, gsheets_rec, date_str):
         gsheets_rec['Last Payment Date'] = date_str
         last_paid_date = datetime.datetime.strptime(date_str, '%Y/%m/%d')
-        tdiff = datetime.datetime.now() - last_paid_date
+        tdiff = self.reference_date - last_paid_date
         if (tdiff.days > 31):
             gsheets_rec[self.get_delinquent_column_header()] = str(int(tdiff.days / 30)) # approximate months, not exact.
         else:
@@ -187,7 +190,7 @@ class Reporter:
             if not self.gsheets_dict_records.get(k):
                 date_str = stripe_dict_records[k]['Created (UTC)']
                 last_paid_date = datetime.datetime.strptime(date_str, '%Y/%m/%d')
-                tdiff = datetime.datetime.now() - last_paid_date
+                tdiff = self.reference_date - last_paid_date
                 if (tdiff.days < 3 * 31): # consider payments within (approximately) the last three months to be "Current"
                     print('Adding member from stripe: ' + k)
                     new_row = self.create_new_row(k)
@@ -233,6 +236,7 @@ class Reporter:
             if not r.get('First Name'):
                 not_in_master_list_count += 1
         print('Members not in master list: ' + str(not_in_master_list_count))
+        print('Delinquent as of ' +  self.ref_date_string)
 
     def merge_generated_into_manual_data(self, generated_dict_records):
         for k, v in generated_dict_records.items():
