@@ -215,6 +215,7 @@ class Reporter:
             'Membership Agreement Date',
             'Address',
             'Phone',
+            'Color'
         ]
         i = 0
         for field_name in self.gsheets_fieldnames:
