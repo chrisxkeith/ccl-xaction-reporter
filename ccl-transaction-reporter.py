@@ -31,22 +31,28 @@ class Reporter:
         else:
             dict[email.strip()] = record
 
+    def handle_email_mapping(self, dict, record):
+        dict[record['source_email']] = record['membership_email']
+
+    def read_email_mapping(self, file_name):
+        ret = {}
+        if path.exists(file_name + '.csv'):
+            junk, ret = self.read_from_stream_into_dict(file_name + '.csv', self.handle_email_mapping)
+        log('No file: ' + file_name + '.csv, no email mapping.')
+        return ret
+
+    stripe_to_membership_email_mapping = None
     def handle_stripe(self, dict, record):
         # Email address in Stripe (same applies to PayPal) may be different from email submitted to CCL.
         # Use the CCL email as the key in the various dicts so data can be merged into gsheets_dict_records.
         # The key in gsheets_dict_records should be the same as the email in the value (e.g., dict for single record).
-        stripe_to_membership_email_mapping = {
-                'besart_morina@yahoo.com' : 'kingmushrooms@gmail.com', 
-                'jc_smoot@yahoo.com' : 'jcs.ces@gmail.com',
-                'mattpallotta5@gmail.com' : 'mattpallota5@gmail.com',
-                'receipts@ianmathews.com' : 'receipts@ianmatthews.com',
-                'ivelinavramov@yahoo.com' : 'ivelinavramov@gmail.com',
-        }
+        if not self.stripe_to_membership_email_mapping:
+            self.stripe_to_membership_email_mapping = self.read_email_mapping('stripe_email_mapping')
         if '|' in record['Customer Description']:
             junk, email = record['Customer Description'].split('|')
             email = email.strip().lower()
-            if stripe_to_membership_email_mapping.get(email):
-                email = stripe_to_membership_email_mapping.get(email)
+            if self.stripe_to_membership_email_mapping.get(email):
+                email = self.stripe_to_membership_email_mapping.get(email)
             record['Created (UTC)'] = self.stripe_date(record['Created (UTC)'])
             self.find_latest_record(dict, record, email, 'Created (UTC)')
 
@@ -71,13 +77,12 @@ class Reporter:
             record['From Email Address'] = record['From Email Address'].strip().lower()
             self.find_latest_record(dict, record, record['From Email Address'], 'Date')
 
+    paypal_to_membership_email_mapping = None
     def handle_paypal(self, dict, record):
-        paypal_to_membership_email_mapping = {
-                    'rolfvw@pizzicato.com' : 'rolfvw@gmail.com',
-                    'alan@halo.nu' : 'alanrockefeller@gmail.com',
-        }
-        if paypal_to_membership_email_mapping.get(record['From Email Address']):
-            record['From Email Address'] = paypal_to_membership_email_mapping.get(record['From Email Address'])
+        if not self.paypal_to_membership_email_mapping:
+            self.paypal_to_membership_email_mapping = self.read_email_mapping('paypal_email_mapping')
+        if self.paypal_to_membership_email_mapping.get(record['From Email Address']):
+            record['From Email Address'] = self.paypal_to_membership_email_mapping.get(record['From Email Address'])
         if record.get('Balance Impact'):
             if 'Credit' == record['Balance Impact']:
                 self.convert_to_paypal(dict, record)
@@ -116,7 +121,7 @@ class Reporter:
                     dict_processing_funct(dict, record)
                     c += 1
             except Exception as e:
-                print('Exception: ' + e)
+                print('Exception: ' + str(e))
                 print(file_name + ': Failed on record ' + str(c))
                 print(str(record))
         log(str("{: >4d}".format(len(dict))) + ' records read from "' + file_name + '"')
