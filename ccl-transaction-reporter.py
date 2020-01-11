@@ -38,7 +38,6 @@ class Reporter:
         ret = {}
         if path.exists(file_name + '.csv'):
             junk, ret = self.read_from_stream_into_dict(file_name + '.csv', self.handle_email_mapping)
-            log('Read email mappings from: ' + file_name + '.csv')
         else:
             log('No file: ' + file_name + '.csv, no email mapping.')
         return ret
