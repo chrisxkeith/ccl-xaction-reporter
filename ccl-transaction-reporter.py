@@ -128,8 +128,7 @@ class Reporter:
         log(str("{: >4d}".format(len(dict))) + ' records read from "' + file_name + '"')
         return fieldnames, dict 
 
-    ref_date_string = '2019/11/02'
-    # Must manually change when new Stripe/PalPal files are provided.
+    ref_date_string = datetime.date.today().strftime("%Y/%m/%d")
     reference_date = datetime.datetime.strptime(ref_date_string, '%Y/%m/%d')
     def find_latest_payment(self, gsheets_rec, date_str):
         gsheets_rec['Last Payment Date'] = date_str
@@ -197,7 +196,7 @@ class Reporter:
                 date_str = stripe_dict_records[k]['Created (UTC)']
                 last_paid_date = datetime.datetime.strptime(date_str, '%Y/%m/%d')
                 tdiff = self.reference_date - last_paid_date
-                if (tdiff.days < 3 * 31): # consider payments within (approximately) the last three months to be "Current"
+                if (tdiff.days < 6 * 31): # consider payments within (approximately) the last six months to be "Current"
                     print('Adding member from stripe: ' + k)
                     new_row = self.create_new_row(k)
                     new_row['Last Payment Date'] = date_str
@@ -274,13 +273,15 @@ class Reporter:
         stripe_fieldnames, stripe_dict_records = self.read_from_stream_into_dict(
                 'STRIPE_payments.csv',
                 self.handle_stripe)
-        paypal_fieldnames, paypal_dict_records = self.read_from_stream_into_dict(
-                'PayPal_Payments.csv',
-                self.handle_paypal)
         self.add_unknown_stripe_emails(stripe_dict_records)
-        self.merge_payment_dates(stripe_dict_records, paypal_dict_records)
+        for account_name in [ 'CCL', 'OI' ]:
+            paypal_fieldnames, paypal_dict_records = self.read_from_stream_into_dict(
+                account_name + '_PayPal_Payments.csv',
+                self.handle_paypal)
+            self.merge_payment_dates(stripe_dict_records, paypal_dict_records)
         self.write_payment_statuses()
         self.print_counts()
 
+# https://docs.google.com/document/d/1OTlXxfaBOggsvu7dJvzCHTIpm7vuKPNFlF-2IhJFe7Y/edit 
 if '__main__' == __name__:
     Reporter().main()
