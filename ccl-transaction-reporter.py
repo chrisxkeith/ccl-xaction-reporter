@@ -112,7 +112,7 @@ class Reporter:
     def read_from_stream_into_dict(self, file_name, dict_processing_funct):
         dict = {}
         fieldnames = None
-        with open(file_name, 'r', newline='') as infile:
+        with open(file_name, 'r', newline='', encoding="utf-8-sig") as infile:
             reader = csv.DictReader(infile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             fieldnames = reader.fieldnames
             c = 1
@@ -123,7 +123,7 @@ class Reporter:
                     c += 1
             except Exception as e:
                 print('Exception: ' + str(e))
-                print(file_name + ': Failed on record ' + str(c))
+                print(file_name + ': Failed near record ' + str(c))
                 print(str(record))
         log(str("{: >4d}".format(len(dict))) + ' records read from "' + file_name + '"')
         return fieldnames, dict 
