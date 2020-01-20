@@ -5,6 +5,7 @@ import csv
 import datetime
 import os.path
 from os import path
+import traceback
 
 def log(message):
     script_name = sys.argv[0]
@@ -17,8 +18,17 @@ class Reporter:
 
     def stripe_date(self, datetime_str):
         date_str, time_str = datetime_str.split(' ')
-        year, month, day = date_str.split('-')
-        dt = datetime.datetime(int(year), int(month), int(day), 0, 0, 0)
+        if '-' in date_str:
+            year, month, day = date_str.split('-')
+        else:
+            if '/' in date_str:
+                month, day, year = date_str.split('/')
+            else:
+                raise NameError('Unknown date format: ' + date_str)
+        year = int(year)
+        if (year < 2000):
+            year += 2000
+        dt = datetime.datetime(year, int(month), int(day), 0, 0, 0)
         return dt.strftime('%Y/%m/%d')
 
     def find_latest_record(self, dict, record, email, date_col_name):
@@ -122,6 +132,7 @@ class Reporter:
                     dict_processing_funct(dict, record)
                     c += 1
             except Exception as e:
+                print(traceback.format_exc())
                 print('Exception: ' + str(e))
                 print(file_name + ': Failed near record ' + str(c))
                 print(str(record))
