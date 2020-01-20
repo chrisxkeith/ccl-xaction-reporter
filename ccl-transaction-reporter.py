@@ -220,17 +220,17 @@ class Reporter:
         self.gsheets_fieldnames = [
             'First Name',
             'Family (Last) Name',
+            'Membership Agreement Date',
             'Email',
-            'Status',
+            'Address',
+            'Phone',
+            'Notes',
             'Expected Payment Amount',
             'Last Payment Amount',
             'Last Payment Date',
             self.get_delinquent_column_header(),
             'Payment Method',
-            'Notes',
-            'Membership Agreement Date',
-            'Address',
-            'Phone',
+            'Status',
             'Color'
         ]
         i = 0
@@ -271,6 +271,55 @@ class Reporter:
                 if not v.get(field_name):
                     v[field_name] = ''
 
+    def create_column_record(self, col_fieldnames, source_key):
+        col_rec = {}
+        for f in col_fieldnames:
+            col_rec[f] = self.gsheets_dict_records[source_key][f]
+        return col_rec
+
+    def write_new_members(self):
+        out_file_name = 'new_members.csv'
+        with open(out_file_name, 'w', newline='') as outfile:
+            col_fieldnames = ['Color2'] + self.gsheets_fieldnames
+            col_fieldnames.remove('Expected Payment Amount')
+            col_fieldnames.remove('Status')
+            col_fieldnames.remove('Color')
+            col_fieldnames = col_fieldnames + ['Email', 'Status', 'Expected Payment Amount', 'Color']
+            writer = csv.DictWriter(outfile, col_fieldnames, delimiter=',', quotechar='"',
+                                    quoting=csv.QUOTE_MINIMAL)
+            writer.writeheader()
+            c = 0
+            for r in self.gsheets_dict_records.values():
+                if not r.get('First Name'):
+                    writer.writerow(r)
+                    c += 1
+            log(str("{: >4d}".format(c)) + ' records written to "' + out_file_name + '"')
+
+    # Read master csv one more time, keeping existing order and keeping only current members.
+    def write_payment_columns(self):
+        out_file_name = 'payment_columns.csv'
+        with open(out_file_name, 'w', newline='') as outfile:
+            col_fieldnames = ['Last Payment Amount', 'Last Payment Date', 'Months Delinquent', 'Payment Method', 'Email']
+            writer = csv.DictWriter(outfile, col_fieldnames, delimiter=',', quotechar='"',
+                                    quoting=csv.QUOTE_MINIMAL)
+            writer.writeheader()
+            file_name = 'Member list for export - Sheet1.csv'
+            with open(file_name, 'r', newline='', encoding="utf-8-sig") as infile:
+                c = 0
+                reader = csv.DictReader(infile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                try:
+                    for record in reader:
+                        if record['Status'] == 'Current':
+                            writer.writerow(self.create_column_record(col_fieldnames, record['Email'].lower().strip()))
+                            c += 1
+                except Exception as e:
+                    print(traceback.format_exc())
+                    print('Exception: ' + str(e))
+                    print(file_name + ': Failed near record ' + str(c))
+                    print(str(record))
+                log(str("{: >4d}".format(c)) + ' records written to "' + out_file_name + '"')
+
+
     def main(self):
         self.gsheets_fieldnames, self.gsheets_dict_records = self.read_from_stream_into_dict(
                 'Member list for export - Sheet1.csv',
@@ -291,6 +340,8 @@ class Reporter:
                 self.handle_paypal)
             self.merge_payment_dates(stripe_dict_records, paypal_dict_records)
         self.write_payment_statuses()
+        self.write_payment_columns()
+        self.write_new_members()
         self.print_counts()
 
 # https://docs.google.com/document/d/1OTlXxfaBOggsvu7dJvzCHTIpm7vuKPNFlF-2IhJFe7Y/edit 
