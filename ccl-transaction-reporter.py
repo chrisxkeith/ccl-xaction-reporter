@@ -172,8 +172,6 @@ class Reporter:
                     else:
                         if not gsheets_rec.get('Payment Method'):
                             gsheets_rec['Payment Method'] = 'unknown'
-            if gsheets_rec['Status'] == 'Current' and not gsheets_rec.get('Expected Payment Amount') and not gsheets_rec.get('Last Payment Amount'):
-                gsheets_rec['Status'] = "Pending"
 
     def write_payment_statuses(self):
         out_file_name = 'payment_statuses.csv'
