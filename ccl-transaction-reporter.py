@@ -326,10 +326,6 @@ class Reporter:
                 self.handle_new_sheet)
         self.setup_column_names()
         self.add_fields()
-        generated_fieldnames, generated_dict_records = self.read_from_stream_into_dict(
-                'payment statuses - payment_statuses.csv',
-                self.handle_new_sheet)
-        self.merge_generated_into_manual_data(generated_dict_records)
         stripe_fieldnames, stripe_dict_records = self.read_from_stream_into_dict(
                 'STRIPE_payments.csv',
                 self.handle_stripe)
