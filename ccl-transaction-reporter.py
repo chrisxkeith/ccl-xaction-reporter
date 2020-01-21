@@ -334,7 +334,7 @@ class Reporter:
                 'STRIPE_payments.csv',
                 self.handle_stripe)
         self.add_unknown_stripe_emails(stripe_dict_records)
-        for account_name in [ 'CCL', 'OI' ]:
+        for account_name in [ 'CCL' ]:
             paypal_fieldnames, paypal_dict_records = self.read_from_stream_into_dict(
                 account_name + '_PayPal_Payments.csv',
                 self.handle_paypal)
