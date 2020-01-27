@@ -269,10 +269,10 @@ class Reporter:
                 if not v.get(field_name):
                     v[field_name] = ''
 
-    def create_column_record(self, col_fieldnames, source_key):
+    def create_column_record(self, col_fieldnames, source_key, source_rec):
         col_rec = {}
         for f in col_fieldnames:
-            col_rec[f] = self.gsheets_dict_records[source_key][f]
+            col_rec[f] = source_rec[f]
         return col_rec
 
     def write_new_members(self):
@@ -297,7 +297,7 @@ class Reporter:
     def write_payment_columns(self):
         out_file_name = 'payment_columns.csv'
         with open(out_file_name, 'w', newline='') as outfile:
-            col_fieldnames = ['Last Payment Amount', 'Last Payment Date', 'Months Delinquent', 'Payment Method', 'Email']
+            col_fieldnames = ['Email', 'Status', 'Months Delinquent', 'Last Payment Amount', 'Last Payment Date', 'Payment Method']
             writer = csv.DictWriter(outfile, col_fieldnames, delimiter=',', quotechar='"',
                                     quoting=csv.QUOTE_MINIMAL)
             writer.writeheader()
@@ -308,8 +308,11 @@ class Reporter:
                 try:
                     for record in reader:
                         if record['Status'] == 'Current':
-                            writer.writerow(self.create_column_record(col_fieldnames, record['Email'].lower().strip()))
-                            c += 1
+                            if not record.get('First Name'):
+                                record['Status'] = 'Not in master list'
+                            if record['Months Delinquent'] or record['Status'] == 'Not in master list':
+                                writer.writerow(self.create_column_record(col_fieldnames, record['Email'].lower().strip(), record))
+                                c += 1
                 except Exception as e:
                     print(traceback.format_exc())
                     print('Exception: ' + str(e))
