@@ -6,6 +6,7 @@ import datetime
 import os.path
 from os import path
 import traceback
+import re
 
 def log(message):
     script_name = sys.argv[0]
@@ -116,8 +117,15 @@ class Reporter:
         dict[record['Email']] = record
 
     def handle_new_sheet(self, dict, record):
+        del record['']
         record['Email'] = record['Email'].strip().lower()
-        dict[record['Email']] = record
+        if record['Email']:
+            is_email = re.match('\S+@\S+.\S+', record['Email'])
+            if is_email:
+                dict[record['Email']] = record
+            else:
+                if record['Status'] == "Current":
+                    log('Bad email, cannot lookup payment: "' + str(record) + '"')
 
     def read_from_stream_into_dict(self, file_name, dict_processing_funct):
         dict = {}
@@ -206,7 +214,7 @@ class Reporter:
                 last_paid_date = datetime.datetime.strptime(date_str, '%Y/%m/%d')
                 tdiff = self.reference_date - last_paid_date
                 if (tdiff.days < 6 * 31): # consider payments within (approximately) the last six months to be "Current"
-                    print('Adding member from stripe: ' + k)
+                    print('Adding member from stripe: "' + k + '"')
                     new_row = self.create_new_row(k)
                     new_row['Last Payment Date'] = date_str
                     new_row['Last Payment Amount'] = stripe_dict_records[k]['Amount']
@@ -244,8 +252,7 @@ class Reporter:
                 counts[status] = 1
             else:
                 counts[status] += 1
-        for k in counts.keys():
-            print(k + ' members: ' + str(counts[k]))
+        print('Current members: ' + str(counts['Current']))
         not_in_master_list_count = 0
         for r in self.gsheets_dict_records.values():
             if not r.get('First Name'):
@@ -310,7 +317,7 @@ class Reporter:
                         if record['Status'] == 'Current':
                             if not record.get('First Name'):
                                 record['Status'] = 'Not in master list'
-                            if record['Months Delinquent'] or record['Status'] == 'Not in master list':
+                            if record.get('Months Delinquent') or record['Status'] == 'Not in master list':
                                 writer.writerow(self.create_column_record(col_fieldnames, record['Email'].lower().strip(), record))
                                 c += 1
                 except Exception as e:
