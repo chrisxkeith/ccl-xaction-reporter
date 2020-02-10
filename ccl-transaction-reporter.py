@@ -272,27 +272,9 @@ class Reporter:
             col_rec[f] = source_rec[f]
         return col_rec
 
-    def write_new_members(self):
-        out_file_name = 'new_members.csv'
-        with open(out_file_name, 'w', newline='') as outfile:
-            col_fieldnames = ['Color2'] + self.gsheets_fieldnames
-            col_fieldnames.remove('Expected Payment Amount')
-            col_fieldnames.remove('Status')
-            col_fieldnames.remove('Color')
-            col_fieldnames = col_fieldnames + ['Email', 'Status', 'Expected Payment Amount', 'Color']
-            writer = csv.DictWriter(outfile, col_fieldnames, delimiter=',', quotechar='"',
-                                    quoting=csv.QUOTE_MINIMAL)
-            writer.writeheader()
-            c = 0
-            for r in self.gsheets_dict_records.values():
-                if not r.get('First Name'):
-                    writer.writerow(r)
-                    c += 1
-            log(str("{: >4d}".format(c)) + ' records written to "' + out_file_name + '"')
-
     # Read master csv one more time, keeping existing order and keeping only current members.
     def write_payment_columns(self):
-        out_file_name = 'payment_columns.csv'
+        out_file_name = 'payment_statuses.csv'
         with open(out_file_name, 'w', newline='') as outfile:
             col_fieldnames = ['Email', 'Status', 'Months Delinquent', 'Last Payment Amount', 'Last Payment Date', 'Payment Method']
             writer = csv.DictWriter(outfile, col_fieldnames, delimiter=',', quotechar='"',
@@ -333,7 +315,6 @@ class Reporter:
                 self.handle_paypal)
             self.merge_payment_dates(stripe_dict_records, paypal_dict_records)
         self.write_payment_columns()
-        self.write_new_members()
         self.print_counts()
 
 # https://docs.google.com/document/d/1OTlXxfaBOggsvu7dJvzCHTIpm7vuKPNFlF-2IhJFe7Y/edit 
