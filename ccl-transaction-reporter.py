@@ -181,16 +181,6 @@ class Reporter:
                         if not gsheets_rec.get('Payment Method'):
                             gsheets_rec['Payment Method'] = 'unknown'
 
-    def write_payment_statuses(self):
-        out_file_name = 'payment_statuses.csv'
-        with open(out_file_name, 'w', newline='') as outfile:
-            writer = csv.DictWriter(outfile, self.gsheets_fieldnames, delimiter=',', quotechar='"',
-                                    quoting=csv.QUOTE_MINIMAL)
-            writer.writeheader()
-            for key in sorted(self.gsheets_dict_records.keys()):
-                writer.writerow(self.gsheets_dict_records[key])
-        log(str("{: >4d}".format(len(self.gsheets_dict_records))) + ' records written to "' + out_file_name + '"')
-
     def write_dict_to_csv(self, out_file_name, field_names, dict):
         with open(out_file_name, 'w', newline='') as outfile:
             writer = csv.DictWriter(outfile, field_names, delimiter=',', quotechar='"',
@@ -308,25 +298,23 @@ class Reporter:
             writer = csv.DictWriter(outfile, col_fieldnames, delimiter=',', quotechar='"',
                                     quoting=csv.QUOTE_MINIMAL)
             writer.writeheader()
-            file_name = 'Member list for export - Sheet1.csv'
-            with open(file_name, 'r', newline='', encoding="utf-8-sig") as infile:
-                c = 0
-                reader = csv.DictReader(infile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            c = 0
+            for new_rec in self.gsheets_dict_records.values():
                 try:
-                    for record in reader:
-                        if record['Status'] == 'Current':
-                            if not record.get('First Name'):
-                                record['Status'] = 'Not in master list'
-                            new_rec = self.gsheets_dict_records[record['Email'].lower().strip()]
-                            if new_rec.get('Months Delinquent') or new_rec['Status'] == 'Not in master list':
-                                writer.writerow(self.create_column_record(col_fieldnames, record['Email'].lower().strip(), new_rec))
-                                c += 1
+                    if not new_rec.get('First Name'):
+                        new_rec['Status'] = 'Not in master list'
+                        writer.writerow(self.create_column_record(col_fieldnames, new_rec['Email'], new_rec))
+                        c += 1
+                    if new_rec['Status'] == 'Current':
+                        if new_rec.get('Months Delinquent'):
+                            writer.writerow(self.create_column_record(col_fieldnames, new_rec['Email'], new_rec))
+                            c += 1
                 except Exception as e:
                     print(traceback.format_exc())
                     print('Exception: ' + str(e))
                     print(file_name + ': Failed near record ' + str(c))
                     print(str(record))
-                log(str("{: >4d}".format(c)) + ' records written to "' + out_file_name + '"')
+            log(str("{: >4d}".format(c)) + ' records written to "' + out_file_name + '"')
 
 
     def main(self):
@@ -344,7 +332,6 @@ class Reporter:
                 account_name + '_PayPal_Payments.csv',
                 self.handle_paypal)
             self.merge_payment_dates(stripe_dict_records, paypal_dict_records)
-        self.write_payment_statuses()
         self.write_payment_columns()
         self.write_new_members()
         self.print_counts()
