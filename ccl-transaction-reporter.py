@@ -317,8 +317,9 @@ class Reporter:
                         if record['Status'] == 'Current':
                             if not record.get('First Name'):
                                 record['Status'] = 'Not in master list'
-                            if record.get('Months Delinquent') or record['Status'] == 'Not in master list':
-                                writer.writerow(self.create_column_record(col_fieldnames, record['Email'].lower().strip(), record))
+                            new_rec = self.gsheets_dict_records[record['Email'].lower().strip()]
+                            if new_rec.get('Months Delinquent') or new_rec['Status'] == 'Not in master list':
+                                writer.writerow(self.create_column_record(col_fieldnames, record['Email'].lower().strip(), new_rec))
                                 c += 1
                 except Exception as e:
                     print(traceback.format_exc())
