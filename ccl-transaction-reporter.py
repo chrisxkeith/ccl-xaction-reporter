@@ -317,6 +317,5 @@ class Reporter:
         self.write_payment_columns()
         self.print_counts()
 
-# https://docs.google.com/document/d/1OTlXxfaBOggsvu7dJvzCHTIpm7vuKPNFlF-2IhJFe7Y/edit 
 if '__main__' == __name__:
     Reporter().main()
